@@ -193,6 +193,18 @@
       min-width: 28px;
     }
 
+    /* ── Heatmap row (side by side) ── */
+    #heatmap-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    #heatmap-row .card { margin-bottom: 0; }
+    @media (max-width: 680px) {
+      #heatmap-row { grid-template-columns: 1fr; }
+    }
+
     /* ── Overdue ── */
     #overdue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
     .overdue-label { font-size: 10px; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.08em; }
@@ -266,18 +278,18 @@
       <button class="tab-btn evening" data-tab="evening" onclick="switchTab('evening')">🌙 Evening</button>
     </div>
 
-    <!-- Pick 3 heatmap -->
-    <div class="card" id="heatmap-pick3-card">
-      <div class="card-title" id="heatmap-pick3-title" style="color:var(--cyan)"></div>
-      <div class="card-sub">Hit count per digit, per day of week</div>
-      <div class="overflow-x"><table class="heatmap-table" id="heatmap-pick3"></table></div>
-    </div>
-
-    <!-- Fireball heatmap -->
-    <div class="card" id="heatmap-fb-card">
-      <div class="card-title" id="heatmap-fb-title" style="color:var(--orange)"></div>
-      <div class="card-sub">Fireball digit hit count per day of week</div>
-      <div class="overflow-x"><table class="heatmap-table" id="heatmap-fb"></table></div>
+    <!-- Heatmaps (side by side) -->
+    <div id="heatmap-row">
+      <div class="card" id="heatmap-pick3-card">
+        <div class="card-title" id="heatmap-pick3-title" style="color:var(--cyan)"></div>
+        <div class="card-sub">Hit count per digit, per day of week</div>
+        <div class="overflow-x"><table class="heatmap-table" id="heatmap-pick3"></table></div>
+      </div>
+      <div class="card" id="heatmap-fb-card">
+        <div class="card-title" id="heatmap-fb-title" style="color:var(--orange)"></div>
+        <div class="card-sub">Fireball digit hit count per day of week</div>
+        <div class="overflow-x"><table class="heatmap-table" id="heatmap-fb"></table></div>
+      </div>
     </div>
 
     <!-- Overdue -->
@@ -349,14 +361,34 @@ function heatmap(draws, useFb=false) {
 }
 
 function overdue(draws) {
-  const sorted = [...draws].sort((a,b)=>b.date.localeCompare(a.date));
-  const dLast = {}, fbLast = {};
-  DIGITS.forEach(d=>{ dLast[d]=sorted.length; fbLast[d]=sorted.length; });
-  sorted.forEach((draw,i)=>{
-    draw.digits.forEach(d=>{ if(dLast[d]===sorted.length) dLast[d]=i; });
-    if(fbLast[draw.fireball]===sorted.length) fbLast[draw.fireball]=i;
+  // Track the most-recent DATE each digit/fireball appeared
+  const dLastDate = {}, fbLastDate = {};
+  DIGITS.forEach(d => { dLastDate[d] = null; fbLastDate[d] = null; });
+
+  const sorted = [...draws].sort((a, b) => b.date.localeCompare(a.date));
+  for (const draw of sorted) {
+    for (const d of draw.digits) {
+      if (dLastDate[d] === null) dLastDate[d] = draw.date;
+    }
+    if (fbLastDate[draw.fireball] === null) fbLastDate[draw.fireball] = draw.date;
+    // Early exit once every digit has been found
+    if (DIGITS.every(d => dLastDate[d] !== null) &&
+        DIGITS.every(d => fbLastDate[d] !== null)) break;
+  }
+
+  // Convert last-seen date → calendar days ago (using noon to avoid DST edge cases)
+  const todayMs = new Date().setHours(12, 0, 0, 0);
+  function daysSince(dateStr) {
+    if (!dateStr) return 9999; // never seen in dataset
+    return Math.max(0, Math.round((todayMs - new Date(dateStr + 'T12:00:00')) / 86400000));
+  }
+
+  const digits = {}, fireball = {};
+  DIGITS.forEach(d => {
+    digits[d]   = daysSince(dLastDate[d]);
+    fireball[d] = daysSince(fbLastDate[d]);
   });
-  return { digits:dLast, fireball:fbLast };
+  return { digits, fireball };
 }
 
 function recommend(type, dow) {
@@ -375,16 +407,17 @@ function recommend(type, dow) {
   return { pick3: top3, fireball: topFb };
 }
 
-// ─── Heat color ───────────────────────────────────────────────────────────────
+// ─── Heat color (blue = cold/rare → red = hot/frequent) ─────────────────────
 function heatColor(val, max) {
-  if (!val||!max) return '#0a0a18';
-  const r = val/max;
-  if (r<0.15) return '#0d1830';
-  if (r<0.30) return '#0e2d4a';
-  if (r<0.50) return '#0d4d72';
-  if (r<0.70) return '#0b6e96';
-  if (r<0.85) return '#0a90bb';
-  return '#00b8d9';
+  if (!val || !max) return '#04040f';  // zero — near-black
+  const r = val / max;
+  if (r < 0.12) return '#0b1840';      // very cold — dark navy
+  if (r < 0.27) return '#0d3a9a';      // cold — royal blue
+  if (r < 0.42) return '#1a6fd4';      // cool — medium blue
+  if (r < 0.57) return '#c07000';      // warm — amber (hard contrast break)
+  if (r < 0.72) return '#dd4400';      // hot — orange-red
+  if (r < 0.87) return '#f01800';      // very hot — red
+  return '#ff0022';                     // max — vivid red
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────────
@@ -476,7 +509,8 @@ function renderHeatmap(id, map) {
           ${DIGITS.map(d=>{
             const v = map[di][d];
             const bg = heatColor(v, max);
-            const textColor = v/max > 0.5 ? '#fff' : '#444';
+            const r = max ? v / max : 0;
+            const textColor = !v ? '#0d0d22' : r > 0.38 ? '#fff' : '#7aaaee';
             return `<td class="heatmap-cell" style="background:${bg};color:${textColor};font-weight:${v?700:400}" title="${DAYS_FULL[di]} | ${d}: ${v} hits">${v||''}</td>`;
           }).join('')}
         </tr>`).join('')}
@@ -489,8 +523,8 @@ function renderOverdue(od) {
   const maxF = Math.max(...DIGITS.map(d=>od.fireball[d]))||1;
 
   const cols = [
-    { label:'PICK 3 DIGITS', key:'digits', max:maxD, hotClass:'hot-digit', hotBar:'linear-gradient(90deg,#cc2200,#ff6600)' },
-    { label:'🔥 FIREBALL',   key:'fireball',max:maxF, hotClass:'hot-fb',  hotBar:'linear-gradient(90deg,#cc6600,#ffcc00)' },
+    { label:'🔥 FIREBALL',   key:'fireball', max:maxF, hotClass:'hot-fb',    hotBar:'linear-gradient(90deg,#cc6600,#ffcc00)' },
+    { label:'PICK 3 DIGITS', key:'digits',   max:maxD, hotClass:'hot-digit', hotBar:'linear-gradient(90deg,#cc2200,#ff6600)' },
   ];
 
   const grid = document.getElementById('overdue-grid');
