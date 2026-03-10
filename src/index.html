@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IL Pick 3 + Fireball Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #05050f;
+      --bg2: #08081a;
+      --bg3: #0d0d22;
+      --border: rgba(255,255,255,0.06);
+      --cyan: #00ccff;
+      --orange: #ff8800;
+      --gold: #ffaa00;
+      --purple: #bb88ff;
+      --text: #d0d0e0;
+      --muted: #444;
+      --dim: #222;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', Consolas, monospace;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    /* ── Header ── */
+    #header {
+      background: var(--bg2);
+      border-bottom: 1px solid rgba(0,204,255,0.1);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(6px);
+    }
+    #header-inner {
+      max-width: 940px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    #title { font-size: 17px; font-weight: 900; letter-spacing: 0.08em; color: #fff; text-transform: uppercase; }
+    #subtitle { font-size: 10px; color: var(--dim); letter-spacing: 0.08em; margin-top: 2px; }
+    #refresh-btn {
+      background: linear-gradient(135deg,#002255,#005588);
+      border: 1px solid rgba(0,200,255,0.3);
+      color: var(--cyan);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s;
+    }
+    #refresh-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    #refresh-btn .spinner { display: inline-block; }
+    #refresh-btn.loading .spinner { animation: spin 0.8s linear infinite; }
+
+    /* ── Main layout ── */
+    #main { max-width: 940px; margin: 0 auto; padding: 20px 16px 0; }
+
+    /* ── Loading / Error ── */
+    #loading-state {
+      text-align: center;
+      padding: 80px 0;
+      color: var(--dim);
+    }
+    #loading-state .big-spin { font-size: 36px; animation: spin 1s linear infinite; display: inline-block; margin-bottom: 14px; }
+    #error-box {
+      background: rgba(255,50,50,0.06);
+      border: 1px solid rgba(255,50,50,0.2);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 11px;
+      color: #ff7777;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    /* ── Section card ── */
+    .card {
+      background: rgba(255,255,255,0.025);
+      border-radius: 12px;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .card-sub { font-size: 10px; color: var(--muted); margin-bottom: 12px; }
+
+    /* ── Recommendations ── */
+    #rec-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .rec-card {
+      border-radius: 14px;
+      padding: 18px 20px;
+    }
+    .rec-card.midday {
+      background: linear-gradient(135deg,rgba(0,80,160,0.22),rgba(0,30,80,0.12));
+      border: 1px solid rgba(0,204,255,0.22);
+    }
+    .rec-card.evening {
+      background: linear-gradient(135deg,rgba(80,0,160,0.22),rgba(30,0,80,0.12));
+      border: 1px solid rgba(180,120,255,0.22);
+    }
+    .rec-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .rec-type { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; }
+    .rec-day { font-size: 10px; color: var(--muted); }
+    .rec-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 6px; }
+    .pick3-balls { display: flex; gap: 8px; margin-bottom: 12px; }
+    .ball {
+      width: 52px; height: 52px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 900; color: #fff;
+    }
+    .ball.midday { background: linear-gradient(135deg,#002255,#005588); border: 2px solid rgba(0,204,255,0.35); box-shadow: 0 4px 14px rgba(0,150,255,0.2); }
+    .ball.evening { background: linear-gradient(135deg,#1a0033,#440088); border: 2px solid rgba(180,120,255,0.35); box-shadow: 0 4px 14px rgba(140,50,255,0.2); }
+    .fireball-ball {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(135deg,#991100,#ff6600);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 900; color: #fff;
+      border: 2px solid rgba(255,136,68,0.4);
+      box-shadow: 0 4px 14px rgba(255,80,0,0.3);
+    }
+
+    /* ── Tab toggle ── */
+    #tab-bar {
+      display: flex;
+      gap: 0;
+      margin-bottom: 14px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 9px;
+      padding: 3px;
+      border: 1px solid rgba(255,255,255,0.05);
+      width: fit-content;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 7px 20px;
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .tab-btn.active.midday { background: linear-gradient(135deg,#002255,#005588); color: #fff; }
+    .tab-btn.active.evening { background: linear-gradient(135deg,#1a0033,#440077); color: #fff; }
+
+    /* ── Heatmap ── */
+    .heatmap-table { border-collapse: separate; border-spacing: 2px; }
+    .heatmap-table th { color: var(--muted); font-size: 11px; font-weight: 700; padding: 2px 8px; text-align: center; }
+    .heatmap-table th.day-head { width: 32px; color: var(--dim); font-size: 10px; font-weight: 600; text-align: left; }
+    .heatmap-table td.day-label { color: #555; font-size: 10px; font-weight: 600; padding: 1px 4px; white-space: nowrap; }
+    .heatmap-cell {
+      border-radius: 4px;
+      text-align: center;
+      font-size: 11px;
+      padding: 6px 8px;
+      cursor: default;
+      border: 1px solid rgba(0,0,0,0.25);
+      min-width: 28px;
+    }
+
+    /* ── Overdue ── */
+    #overdue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .overdue-label { font-size: 10px; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.08em; }
+    .overdue-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+    .overdue-badge {
+      width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .overdue-badge.digit { border-radius: 5px; }
+    .overdue-badge.fb { border-radius: 50%; }
+    .overdue-badge.hot-digit { background: linear-gradient(135deg,#cc2200,#ff6600); color: #fff; border: none; }
+    .overdue-badge.hot-fb { background: linear-gradient(135deg,#cc6600,#ffcc00); color: #fff; border: none; }
+    .overdue-badge.cold { background: rgba(255,255,255,0.05); border: 1px solid #222; color: #555; }
+    .overdue-bar-wrap { flex: 1; height: 5px; background: #111; border-radius: 3px; overflow: hidden; }
+    .overdue-bar { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+    .overdue-count { font-size: 10px; color: var(--muted); width: 28px; text-align: right; }
+
+    /* ── Recent draws table ── */
+    #draws-table { width: 100%; border-collapse: collapse; min-width: 300px; }
+    #draws-table th { padding: 4px 10px; text-align: left; font-size: 10px; color: var(--dim); font-weight: 600; letter-spacing: 0.06em; border-bottom: 1px solid #111; }
+    #draws-table td { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+    .d-ball { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 5px; background: rgba(0,80,160,0.15); border: 1px solid rgba(0,120,220,0.2); font-size: 12px; font-weight: 700; color: #5588bb; }
+    .fb-ball { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(180,60,0,0.2); border: 1px solid rgba(255,100,0,0.25); font-size: 12px; font-weight: 700; color: #ff8844; }
+
+    /* ── Misc ── */
+    .section-label { font-size: 10px; color: var(--dim); letter-spacing: 0.15em; margin-bottom: 10px; text-transform: uppercase; }
+    #disclaimer { margin-top: 20px; font-size: 9px; color: #18182a; text-align: center; letter-spacing: 0.08em; }
+    .overflow-x { overflow-x: auto; }
+
+    @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+    .fade-in { animation: fadeIn 0.35s ease forwards; }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <div id="header-inner">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🔥</span>
+        <span id="title">IL Pick 3 + Fireball</span>
+      </div>
+      <div id="subtitle">loading…</div>
+    </div>
+    <button id="refresh-btn" onclick="init()">
+      <span class="spinner">⟳</span> Refresh
+    </button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="error-box"></div>
+
+  <div id="loading-state">
+    <div class="big-spin">⟳</div>
+    <div style="font-size:12px;letter-spacing:0.1em;color:#334">LOADING DRAWS…</div>
+  </div>
+
+  <div id="dashboard" style="display:none">
+
+    <!-- Recommendations -->
+    <div class="section-label" id="rec-label"></div>
+    <div id="rec-grid"></div>
+
+    <!-- Tab toggle -->
+    <div id="tab-bar">
+      <button class="tab-btn active midday" data-tab="midday" onclick="switchTab('midday')">☀️ Midday</button>
+      <button class="tab-btn evening" data-tab="evening" onclick="switchTab('evening')">🌙 Evening</button>
+    </div>
+
+    <!-- Pick 3 heatmap -->
+    <div class="card" id="heatmap-pick3-card">
+      <div class="card-title" id="heatmap-pick3-title" style="color:var(--cyan)"></div>
+      <div class="card-sub">Hit count per digit, per day of week</div>
+      <div class="overflow-x"><table class="heatmap-table" id="heatmap-pick3"></table></div>
+    </div>
+
+    <!-- Fireball heatmap -->
+    <div class="card" id="heatmap-fb-card">
+      <div class="card-title" id="heatmap-fb-title" style="color:var(--orange)"></div>
+      <div class="card-sub">Fireball digit hit count per day of week</div>
+      <div class="overflow-x"><table class="heatmap-table" id="heatmap-fb"></table></div>
+    </div>
+
+    <!-- Overdue -->
+    <div class="card" style="border-color:rgba(255,160,0,0.15)">
+      <div class="card-title" style="color:var(--gold);margin-bottom:14px">Overdue Numbers</div>
+      <div id="overdue-grid"></div>
+    </div>
+
+    <!-- Recent draws -->
+    <div class="card">
+      <div class="card-title" id="recent-title" style="color:var(--muted);margin-bottom:10px"></div>
+      <div class="overflow-x"><table id="draws-table">
+        <thead><tr>
+          <th>Date</th><th>Day</th><th>D1</th><th>D2</th><th>D3</th><th>FB</th>
+        </tr></thead>
+        <tbody id="draws-tbody"></tbody>
+      </table></div>
+    </div>
+
+    <div id="disclaimer">FOR ENTERTAINMENT ONLY · LOTTERY IS RANDOM · MUST BE 18+</div>
+  </div>
+</div>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────────────────
+const DAYS     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYS_FULL= ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DIGITS   = [0,1,2,3,4,5,6,7,8,9];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let allDraws = [];
+let activeTab = 'midday';
+
+// ─── Data loading ─────────────────────────────────────────────────────────────
+async function init() {
+  setLoading(true);
+  clearError();
+  try {
+    // Fetch the pre-built JSON committed by the scraper
+    // draws.json is deployed alongside index.html in the same directory
+    const res = await fetch('draws.json?' + Date.now());
+    if (!res.ok) throw new Error(`HTTP ${res.status} — draws.json not found. Run the scraper first (see README).`);
+    const json = await res.json();
+    allDraws = json.draws || [];
+    if (allDraws.length === 0) throw new Error('No draws in data file.');
+    const updated = json.updatedAt ? new Date(json.updatedAt) : null;
+    document.getElementById('subtitle').textContent =
+      `${allDraws.length} draws · ${updated ? 'updated ' + updated.toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : 'cached'}`;
+    render();
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ─── Stats ───────────────────────────────────────────────────────────────────
+function filtered(type) {
+  return allDraws.filter(d => d.type === type);
+}
+
+function heatmap(draws, useFb=false) {
+  const map = Array.from({length:7}, ()=>Array(10).fill(0));
+  for (const d of draws) {
+    if (useFb) { map[d.dayOfWeek][d.fireball]++; }
+    else { for (const dig of d.digits) map[d.dayOfWeek][dig]++; }
+  }
+  return map;
+}
+
+function overdue(draws) {
+  const sorted = [...draws].sort((a,b)=>b.date.localeCompare(a.date));
+  const dLast = {}, fbLast = {};
+  DIGITS.forEach(d=>{ dLast[d]=sorted.length; fbLast[d]=sorted.length; });
+  sorted.forEach((draw,i)=>{
+    draw.digits.forEach(d=>{ if(dLast[d]===sorted.length) dLast[d]=i; });
+    if(fbLast[draw.fireball]===sorted.length) fbLast[draw.fireball]=i;
+  });
+  return { digits:dLast, fireball:fbLast };
+}
+
+function recommend(type, dow) {
+  const draws = filtered(type);
+  const hm  = heatmap(draws, false);
+  const fhm = heatmap(draws, true);
+  const od  = overdue(draws);
+  const maxOD = Math.max(...DIGITS.map(d=>od.digits[d]))||1;
+  const maxFB = Math.max(...DIGITS.map(d=>od.fireball[d]))||1;
+
+  const score = d => hm[dow][d]*2 + (od.digits[d]/maxOD)*3;
+  const fbScore = d => fhm[dow][d]*2 + (od.fireball[d]/maxFB)*3;
+
+  const top3 = [...DIGITS].sort((a,b)=>score(b)-score(a)).slice(0,3);
+  const topFb = [...DIGITS].sort((a,b)=>fbScore(b)-fbScore(a))[0];
+  return { pick3: top3, fireball: topFb };
+}
+
+// ─── Heat color ───────────────────────────────────────────────────────────────
+function heatColor(val, max) {
+  if (!val||!max) return '#0a0a18';
+  const r = val/max;
+  if (r<0.15) return '#0d1830';
+  if (r<0.30) return '#0e2d4a';
+  if (r<0.50) return '#0d4d72';
+  if (r<0.70) return '#0b6e96';
+  if (r<0.85) return '#0a90bb';
+  return '#00b8d9';
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  const today = new Date();
+  const dow = today.getDay();
+
+  // Recommendations
+  document.getElementById('rec-label').textContent = `Today's Recommendations — ${DAYS_FULL[dow]}`;
+  const grid = document.getElementById('rec-grid');
+  grid.innerHTML = '';
+  for (const type of ['midday','evening']) {
+    const rec = recommend(type, dow);
+    const isM = type==='midday';
+    const accent = isM ? '#00ccff' : '#bb88ff';
+    const card = document.createElement('div');
+    card.className = `rec-card ${type}`;
+    card.innerHTML = `
+      <div class="rec-header">
+        <span style="font-size:18px">${isM?'☀️':'🌙'}</span>
+        <div>
+          <div class="rec-type" style="color:${accent}">${type.toUpperCase()}</div>
+          <div class="rec-day">${DAYS_FULL[dow]}</div>
+        </div>
+      </div>
+      <div class="rec-label">PICK 3</div>
+      <div class="pick3-balls">
+        ${rec.pick3.map(d=>`<div class="ball ${type}">${d}</div>`).join('')}
+      </div>
+      <div class="rec-label">FIREBALL</div>
+      <div class="fireball-ball">${rec.fireball}</div>
+    `;
+    grid.appendChild(card);
+  }
+
+  renderTab();
+}
+
+function renderTab() {
+  const draws = filtered(activeTab);
+  const isM = activeTab==='midday';
+  const accent = isM ? 'var(--cyan)' : 'var(--purple)';
+
+  // Tab titles
+  document.getElementById('heatmap-pick3-title').textContent = `${activeTab} — pick 3 digit frequency`;
+  document.getElementById('heatmap-fb-title').textContent    = `${activeTab} — fireball frequency`;
+
+  // Heatmaps
+  const hm   = heatmap(draws, false);
+  const fhm  = heatmap(draws, true);
+  renderHeatmap('heatmap-pick3', hm);
+  renderHeatmap('heatmap-fb', fhm);
+
+  // Overdue
+  const od = overdue(draws);
+  renderOverdue(od);
+
+  // Recent table
+  document.getElementById('recent-title').textContent =
+    `Recent ${activeTab} draws (${draws.length} total)`;
+  const tbody = document.getElementById('draws-tbody');
+  tbody.innerHTML = '';
+  const recent = [...draws].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,20);
+  for (const d of recent) {
+    const dt = new Date(d.date+'T12:00:00');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-size:11px;color:#777">${dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'})}</td>
+      <td style="font-size:11px;color:#444">${DAYS[d.dayOfWeek]}</td>
+      ${d.digits.map(n=>`<td><span class="d-ball">${n}</span></td>`).join('')}
+      <td><span class="fb-ball">${d.fireball}</span></td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function renderHeatmap(id, map) {
+  const table = document.getElementById(id);
+  const max = Math.max(...map.flat());
+  table.innerHTML = `
+    <thead><tr>
+      <th class="day-head">Day</th>
+      ${DIGITS.map(d=>`<th>${d}</th>`).join('')}
+    </tr></thead>
+    <tbody>
+      ${DAYS.map((day,di)=>`
+        <tr>
+          <td class="day-label">${day}</td>
+          ${DIGITS.map(d=>{
+            const v = map[di][d];
+            const bg = heatColor(v, max);
+            const textColor = v/max > 0.5 ? '#fff' : '#444';
+            return `<td class="heatmap-cell" style="background:${bg};color:${textColor};font-weight:${v?700:400}" title="${DAYS_FULL[di]} | ${d}: ${v} hits">${v||''}</td>`;
+          }).join('')}
+        </tr>`).join('')}
+    </tbody>
+  `;
+}
+
+function renderOverdue(od) {
+  const maxD = Math.max(...DIGITS.map(d=>od.digits[d]))||1;
+  const maxF = Math.max(...DIGITS.map(d=>od.fireball[d]))||1;
+
+  const cols = [
+    { label:'PICK 3 DIGITS', key:'digits', max:maxD, hotClass:'hot-digit', hotBar:'linear-gradient(90deg,#cc2200,#ff6600)' },
+    { label:'🔥 FIREBALL',   key:'fireball',max:maxF, hotClass:'hot-fb',  hotBar:'linear-gradient(90deg,#cc6600,#ffcc00)' },
+  ];
+
+  const grid = document.getElementById('overdue-grid');
+  grid.innerHTML = '';
+
+  for (const col of cols) {
+    const sorted = [...DIGITS].sort((a,b)=>od[col.key][b]-od[col.key][a]);
+    const isFb = col.key==='fireball';
+    const div = document.createElement('div');
+    div.innerHTML = `<div class="overdue-label">${col.label}</div>` +
+      sorted.map(d=>{
+        const val = od[col.key][d];
+        const ratio = val/col.max;
+        const hot = ratio>0.7;
+        return `
+          <div class="overdue-row">
+            <div class="overdue-badge ${isFb?'fb':'digit'} ${hot?col.hotClass:'cold'}">${d}</div>
+            <div class="overdue-bar-wrap">
+              <div class="overdue-bar" style="width:${ratio*100}%;background:${hot?col.hotBar:'#252535'}"></div>
+            </div>
+            <div class="overdue-count">${val}d</div>
+          </div>`;
+      }).join('');
+    grid.appendChild(div);
+  }
+}
+
+// ─── Tab switch ───────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.classList.remove('active');
+    if (btn.dataset.tab===tab) btn.classList.add('active');
+  });
+  if (allDraws.length>0) renderTab();
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+function setLoading(on) {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = on;
+  btn.classList.toggle('loading', on);
+  document.getElementById('loading-state').style.display = on && allDraws.length===0 ? 'block' : 'none';
+  document.getElementById('dashboard').style.display = allDraws.length>0 ? 'block' : 'none';
+}
+
+function showError(msg) {
+  const box = document.getElementById('error-box');
+  box.textContent = '⚠ ' + msg;
+  box.style.display = 'block';
+  document.getElementById('loading-state').style.display = 'none';
+}
+
+function clearError() {
+  document.getElementById('error-box').style.display = 'none';
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

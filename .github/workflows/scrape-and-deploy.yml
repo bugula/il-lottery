@@ -1,0 +1,69 @@
+name: Scrape & Deploy
+
+on:
+  # Run after each Illinois Lottery drawing (midday ~12:40pm CT, evening ~9:22pm CT)
+  schedule:
+    - cron: '0 18 * * *'   # 1:00pm CT — after midday draw
+    - cron: '30 2 * * *'   # 9:30pm CT — after evening draw
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+    inputs:
+      full_seed:
+        description: 'Seed ALL history back to 2010? (yes/no)'
+        required: false
+        default: 'no'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  scrape-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run scraper
+        run: |
+          # Auto-detect first run: if draws.json is empty, do a full seed
+          DRAW_COUNT=$(python -c "import json; d=json.load(open('data/draws.json')); print(d.get('count',0))")
+          if [ "${{ github.event.inputs.full_seed }}" = "yes" ] || [ "$DRAW_COUNT" = "0" ]; then
+            echo "Running full historical seed (2010 → present)..."
+            python scripts/scrape.py --all
+          else
+            echo "Running incremental update (current + previous year)..."
+            python scripts/scrape.py
+          fi
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/draws.json
+          git diff --staged --quiet || git commit -m "data: update lottery draws $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
+
+      - name: Prepare Pages output
+        run: |
+          mkdir -p _site
+          cp src/index.html _site/index.html
+          cp data/draws.json _site/draws.json
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
