@@ -379,6 +379,50 @@ function recommend(dow) {
   return { pick3: top3, fireball: topFb };
 }
 
+// ─── Draw context (which drawing is next, based on Eastern time) ──────────────
+function getDrawContext() {
+  const now   = new Date();
+  const fmtET = opts => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...opts });
+
+  // Current time as minutes-since-midnight in Eastern time
+  const tp    = fmtET({ hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(now);
+  const etMin = parseInt(tp.find(p => p.type === 'hour').value) * 60
+              + parseInt(tp.find(p => p.type === 'minute').value);
+
+  // Day-of-week and date in Eastern time (may differ from local near midnight)
+  const dp     = fmtET({ weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+  const dow    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+                   .indexOf(dp.find(p => p.type === 'weekday').value);
+  const etDate = `${dp.find(p=>p.type==='year').value}-${dp.find(p=>p.type==='month').value}-${dp.find(p=>p.type==='day').value}`;
+
+  const MIDDAY_CLOSE  = 13 * 60 + 35;  // 1:35 PM ET
+  const EVENING_CLOSE = 22 * 60 + 15;  // 10:15 PM ET
+
+  // Friendly countdown: show minutes if ≤ 90 out, otherwise show clock time
+  const timeLabel = (minsLeft, fallback) =>
+    minsLeft <= 90 ? `closes in ${minsLeft}m ET` : `closes ${fallback} ET`;
+
+  if (etMin < MIDDAY_CLOSE) {
+    return { type: 'midday',  icon: '☀️', drawName: 'Midday Drawing',
+             timeLabel: timeLabel(MIDDAY_CLOSE  - etMin, '1:35p'),
+             dow, date: etDate, tomorrow: false };
+  }
+  if (etMin < EVENING_CLOSE) {
+    return { type: 'evening', icon: '🌙', drawName: 'Evening Drawing',
+             timeLabel: timeLabel(EVENING_CLOSE - etMin, '10:15p'),
+             dow, date: etDate, tomorrow: false };
+  }
+
+  // Both drawings closed — show tomorrow's midday
+  const tomorrowDow   = (dow + 1) % 7;
+  const tmRaw         = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const tdp           = fmtET({ year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(tmRaw);
+  const tomorrowDate  = `${tdp.find(p=>p.type==='year').value}-${tdp.find(p=>p.type==='month').value}-${tdp.find(p=>p.type==='day').value}`;
+  return { type: 'midday', icon: '☀️', drawName: 'Next: Midday',
+           timeLabel: 'closes 1:35p ET tomorrow',
+           dow: tomorrowDow, date: tomorrowDate, tomorrow: true };
+}
+
 // ─── Recommendation tracking ──────────────────────────────────────────────────
 function loadRecs() {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
@@ -386,15 +430,21 @@ function loadRecs() {
 }
 
 function saveRecs(pick3, fireball) {
-  const today  = new Date().toISOString().split('T')[0];
+  const ctx    = getDrawContext();
+  if (ctx.tomorrow) return; // both today's draws are done; tomorrow's page-load saves tomorrow
+
   const stored = loadRecs();
   let changed  = false;
 
-  for (const type of ['midday', 'evening']) {
-    if (stored.some(r => r.date === today && r.type === type)) continue;
-    // Skip if the actual draw is already in our dataset (page loaded after drawing)
-    if (allDraws.some(d => d.date === today && d.type === type)) continue;
-    stored.push({ date: today, type, pick3: [...pick3], fireball });
+  // Before midday close: save both midday + evening as prospective picks (same recs, 2 trials).
+  // After midday close: save only evening (midday has already happened).
+  const types = ctx.type === 'midday' ? ['midday', 'evening'] : ['evening'];
+
+  for (const type of types) {
+    if (stored.some(r => r.date === ctx.date && r.type === type)) continue;
+    // Guard: skip if the actual draw result is already in the dataset
+    if (allDraws.some(d => d.date === ctx.date && d.type === type)) continue;
+    stored.push({ date: ctx.date, type, pick3: [...pick3], fireball });
     changed = true;
   }
 
@@ -429,15 +479,32 @@ function scoreRecs() {
 }
 
 function renderAlgoHealth() {
-  const card   = document.getElementById('algo-health-card');
-  const all    = scoreRecs();
-  const scored = all.filter(r => r.evaluated);
-  const win20  = scored.slice(0, 20); // most recent 20 evaluated draws
+  const card    = document.getElementById('algo-health-card');
+  const all     = scoreRecs();
+  const pending = all.filter(r => !r.evaluated).length;
 
-  if (win20.length < 2) { card.style.display = 'none'; return; }
+  // Hide only if nothing has been recorded at all yet
+  if (all.length === 0) { card.style.display = 'none'; return; }
   card.style.display = 'block';
 
+  const scored = all.filter(r => r.evaluated);
+  const win20  = scored.slice(0, 20); // most recent 20 evaluated draws
   const n      = win20.length;
+
+  // ── No scored draws yet → show "tracking started" holding state ──────────
+  if (n === 0) {
+    document.getElementById('health-sub').textContent =
+      `tracking started · ${pending} draw${pending !== 1 ? 's' : ''} pending results`;
+    document.getElementById('health-stats').innerHTML = `
+      <div style="font-size:11px;color:#555;padding:6px 0;line-height:1.7">
+        Picks are being recorded each time you load the page before a drawing closes.<br>
+        Results will appear here automatically after the next drawing completes.
+      </div>`;
+    document.getElementById('health-log').innerHTML = '';
+    return;
+  }
+
+  // ── Scored draws exist → show stats ──────────────────────────────────────
   const fbHits = win20.filter(r => r.fbHit).length;
   const p3Hits = win20.filter(r => r.p3Hit).length;
   const fbRate = fbHits / n;
@@ -457,7 +524,6 @@ function renderAlgoHealth() {
     return `<span style="color:${c}">${s}${d}% vs ${pct(base)} baseline</span>`;
   };
 
-  const pending = all.filter(r => !r.evaluated).length;
   document.getElementById('health-sub').textContent =
     `rolling last ${n} draws · ${pending} pending result${pending !== 1 ? 's' : ''}`;
 
@@ -533,22 +599,25 @@ function heatTextColor(val, min, max) {
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 function render() {
-  const today = new Date();
-  const dow   = today.getDay();
-  document.getElementById('rec-label').textContent = `Today's Picks — ${DAYS_FULL[dow]}`;
+  const ctx = getDrawContext();
+  const dow = ctx.dow;
+
+  // Section label above card: "Upcoming Drawing" or "Tomorrow's Picks"
+  document.getElementById('rec-label').textContent =
+    ctx.tomorrow ? `Tomorrow's Picks — ${DAYS_FULL[dow]}` : `Upcoming Drawing — ${DAYS_FULL[dow]}`;
 
   const rec = recommend(dow);
 
-  // Save this recommendation for algo health tracking (no-op if already saved today)
+  // Save this recommendation for algo health tracking (no-op if already saved)
   saveRecs(rec.pick3, rec.fireball);
 
-  // Single rec card — same combined picks apply to both drawings
+  // Rec card: contextualised to the actual next drawing
   document.getElementById('rec-card').innerHTML = `
     <div class="rec-header">
-      <span style="font-size:20px">🎯</span>
+      <span style="font-size:20px">${ctx.icon}</span>
       <div>
-        <div class="rec-type" style="color:var(--cyan)">Today's Picks</div>
-        <div class="rec-day">${DAYS_FULL[dow]} &nbsp;·&nbsp; ☀️ midday &amp; 🌙 evening</div>
+        <div class="rec-type" style="color:var(--cyan)">${ctx.drawName}</div>
+        <div class="rec-day">${DAYS_FULL[dow]} &nbsp;·&nbsp; ${ctx.timeLabel}</div>
       </div>
     </div>
     <div class="picks-row">
