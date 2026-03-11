@@ -407,7 +407,9 @@ function recommend(type, dow) {
   return { pick3: top3, fireball: topFb };
 }
 
-// ─── Heat color: smooth min→max lerp, blue (lowest) → orange → red (highest) ─
+// ─── Heat color: gamma-curved min→max, dark navy → blue → orange → bright yellow
+// Gamma > 1 compresses the low end so only truly hot cells break through to bright.
+// 4-stop luminance ramp: ~3 → ~25 → ~110 → ~205 so hot cells literally glow.
 function lerpRGB(c1, c2, t) {
   return [
     Math.round(c1[0] + (c2[0] - c1[0]) * t),
@@ -415,18 +417,29 @@ function lerpRGB(c1, c2, t) {
     Math.round(c1[2] + (c2[2] - c1[2]) * t),
   ];
 }
+const HEAT_GAMMA = 1.8;
+const HEAT_STOPS = [
+  [  4,   7,  24],   // very dark navy  — near-black baseline
+  [ 17,  85, 210],   // medium blue     — cool, still dim
+  [255, 110,   0],   // vivid orange    — warm, eye-catching
+  [255, 220,  55],   // bright yellow   — glows on dark bg (squint target)
+];
 function heatColor(val, min, max) {
-  if (!val) return '#04040f';                     // zero cells — near-black
-  if (max <= min) return 'rgb(255,17,0)';         // all values equal → just show red
-  const t = Math.max(0, Math.min(1, (val - min) / (max - min)));
-  // 3-stop: blue #1155ff → orange #ff9900 → red #ff1100
-  const COLD = [17,  85, 255];
-  const MID  = [255, 153,  0];
-  const HOT  = [255,  17,  0];
-  const [r, g, b] = t < 0.5
-    ? lerpRGB(COLD, MID, t * 2)
-    : lerpRGB(MID,  HOT, (t - 0.5) * 2);
+  if (!val) return '#04040f';
+  if (max <= min) return `rgb(${HEAT_STOPS[3].join(',')})`;
+  const tLin = Math.max(0, Math.min(1, (val - min) / (max - min)));
+  const t    = Math.pow(tLin, HEAT_GAMMA);   // curve: compress low, expand high
+  const s    = t * (HEAT_STOPS.length - 1);
+  const i    = Math.min(Math.floor(s), HEAT_STOPS.length - 2);
+  const [r, g, b] = lerpRGB(HEAT_STOPS[i], HEAT_STOPS[i + 1], s - i);
   return `rgb(${r},${g},${b})`;
+}
+function heatTextColor(val, min, max) {
+  if (!val) return '#0d0d1a';
+  if (max <= min) return '#111';
+  const tLin = Math.max(0, Math.min(1, (val - min) / (max - min)));
+  const t    = Math.pow(tLin, HEAT_GAMMA);
+  return t > 0.60 ? '#111' : '#fff';   // dark text on bright yellow end
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────────
@@ -519,8 +532,8 @@ function renderHeatmap(id, map) {
           <td class="day-label">${day}</td>
           ${DIGITS.map(d=>{
             const v = map[di][d];
-            const bg = heatColor(v, min, max);
-            const textColor = v ? '#fff' : '#0d0d22';
+            const bg        = heatColor(v, min, max);
+            const textColor = heatTextColor(v, min, max);
             return `<td class="heatmap-cell" style="background:${bg};color:${textColor};font-weight:${v?700:400}" title="${DAYS_FULL[di]} | ${d}: ${v} hits">${v||''}</td>`;
           }).join('')}
         </tr>`).join('')}
