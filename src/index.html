@@ -17,6 +17,7 @@
       --orange: #ff8800;
       --gold: #ffaa00;
       --purple: #bb88ff;
+      --green: #44dd88;
       --text: #d0d0e0;
       --muted: #444;
       --dim: #222;
@@ -110,16 +111,7 @@
     }
     .card-sub { font-size: 10px; color: var(--muted); margin-bottom: 12px; }
 
-    /* ── Rec cards: always-visible 2-col grid ── */
-    #time-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-    @media (max-width: 680px) { #time-grid { grid-template-columns: 1fr; } }
-
-    /* ── Heatmap row (tab-controlled, side by side) ── */
+    /* ── Heatmap row (side by side, always visible) ── */
     #heatmap-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -129,33 +121,28 @@
     #heatmap-row .card { margin-bottom: 0; }
     @media (max-width: 680px) { #heatmap-row { grid-template-columns: 1fr; } }
 
-    /* ── Rec card picks row (pick3 + fireball inline) ── */
+    /* ── Rec card (single combined) ── */
     .picks-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
     .picks-divider { width: 1px; height: 44px; background: rgba(255,255,255,0.07); align-self: center; flex-shrink: 0; }
     .rec-card {
+      background: linear-gradient(135deg,rgba(0,60,120,0.28),rgba(0,20,60,0.15));
+      border: 1px solid rgba(0,204,255,0.22);
       border-radius: 14px;
       padding: 18px 20px;
-    }
-    .rec-card.midday {
-      background: linear-gradient(135deg,rgba(0,80,160,0.22),rgba(0,30,80,0.12));
-      border: 1px solid rgba(0,204,255,0.22);
-    }
-    .rec-card.evening {
-      background: linear-gradient(135deg,rgba(80,0,160,0.22),rgba(30,0,80,0.12));
-      border: 1px solid rgba(180,120,255,0.22);
+      margin-bottom: 14px;
     }
     .rec-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
     .rec-type { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; }
     .rec-day { font-size: 10px; color: var(--muted); }
     .rec-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 6px; }
-    .pick3-balls { display: flex; gap: 8px; margin-bottom: 12px; }
     .ball {
       width: 52px; height: 52px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
       font-size: 24px; font-weight: 900; color: #fff;
+      background: linear-gradient(135deg,#002255,#005588);
+      border: 2px solid rgba(0,204,255,0.35);
+      box-shadow: 0 4px 14px rgba(0,150,255,0.2);
     }
-    .ball.midday { background: linear-gradient(135deg,#002255,#005588); border: 2px solid rgba(0,204,255,0.35); box-shadow: 0 4px 14px rgba(0,150,255,0.2); }
-    .ball.evening { background: linear-gradient(135deg,#1a0033,#440088); border: 2px solid rgba(180,120,255,0.35); box-shadow: 0 4px 14px rgba(140,50,255,0.2); }
     .fireball-ball {
       width: 52px; height: 52px; border-radius: 50%;
       background: linear-gradient(135deg,#991100,#ff6600);
@@ -165,33 +152,14 @@
       box-shadow: 0 4px 14px rgba(255,80,0,0.3);
     }
 
-    /* ── Tab toggle ── */
-    #tab-bar {
-      display: flex;
-      gap: 0;
-      margin-bottom: 14px;
-      background: rgba(255,255,255,0.02);
-      border-radius: 9px;
-      padding: 3px;
-      border: 1px solid rgba(255,255,255,0.05);
-      width: fit-content;
-    }
-    .tab-btn {
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      padding: 7px 20px;
-      border-radius: 7px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      cursor: pointer;
-      font-family: inherit;
-      transition: all 0.2s;
-    }
-    .tab-btn.active.midday { background: linear-gradient(135deg,#002255,#005588); color: #fff; }
-    .tab-btn.active.evening { background: linear-gradient(135deg,#1a0033,#440077); color: #fff; }
+    /* ── Algo Health ── */
+    .health-stat { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+    .health-stat-label { width: 90px; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; font-weight: 700; flex-shrink: 0; }
+    .health-stat-count { font-size: 12px; font-weight: 700; min-width: 110px; }
+    .health-stat-vs { font-size: 11px; }
+    .health-table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 360px; }
+    .health-table th { padding: 3px 8px; text-align: left; color: var(--dim); font-size: 10px; border-bottom: 1px solid #111; font-weight: 600; letter-spacing: 0.06em; }
+    .health-table td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); vertical-align: middle; }
 
     /* ── Heatmap ── */
     .heatmap-table { border-collapse: separate; border-spacing: 2px; }
@@ -271,46 +239,45 @@
 
   <div id="dashboard" style="display:none">
 
-    <!-- Rec cards: both always visible -->
+    <!-- Today's Picks (single combined rec card) -->
     <div class="section-label" id="rec-label"></div>
-    <div id="time-grid">
-      <div id="rec-midday" class="rec-card midday"></div>
-      <div id="rec-evening" class="rec-card evening"></div>
+    <div id="rec-card" class="rec-card"></div>
+
+    <!-- Algo Health (shown once tracking data accumulates) -->
+    <div class="card" id="algo-health-card" style="display:none;border-color:rgba(68,221,136,0.12)">
+      <div class="card-title" style="color:var(--green);margin-bottom:4px">Algo Health</div>
+      <div class="card-sub" id="health-sub" style="margin-bottom:12px"></div>
+      <div id="health-stats"></div>
+      <div id="health-log" class="overflow-x" style="margin-top:14px"></div>
     </div>
 
-    <!-- Tab toggle: controls heatmaps + overdue + recent -->
-    <div id="tab-bar">
-      <button class="tab-btn active midday" data-tab="midday" onclick="switchTab('midday')">☀️ Midday</button>
-      <button class="tab-btn evening" data-tab="evening" onclick="switchTab('evening')">🌙 Evening</button>
-    </div>
-
-    <!-- Heatmaps (tab-controlled, side by side) -->
+    <!-- Heatmaps (combined midday + evening, side by side) -->
     <div id="heatmap-row">
       <div class="card">
-        <div class="card-title" id="heatmap-fb-title"></div>
-        <div class="card-sub">Fireball digit hit count per day of week</div>
+        <div class="card-title" style="color:var(--orange)">Fireball Frequency</div>
+        <div class="card-sub">all draws · hit count by digit per day of week</div>
         <div class="overflow-x"><table class="heatmap-table" id="heatmap-fb"></table></div>
       </div>
       <div class="card">
-        <div class="card-title" id="heatmap-pick3-title"></div>
-        <div class="card-sub">Hit count per digit, per day of week</div>
+        <div class="card-title" style="color:var(--cyan)">Pick 3 Frequency</div>
+        <div class="card-sub">all draws · hit count by digit per day of week</div>
         <div class="overflow-x"><table class="heatmap-table" id="heatmap-pick3"></table></div>
       </div>
     </div>
 
-    <!-- Overdue -->
+    <!-- Overdue (combined) -->
     <div class="card" style="border-color:rgba(255,160,0,0.15)">
       <div class="card-title" style="color:var(--gold);margin-bottom:4px">Overdue Numbers</div>
       <div class="card-sub" style="margin-bottom:14px">draws since last seen · midday + evening combined · × = draw count</div>
       <div id="overdue-grid"></div>
     </div>
 
-    <!-- Recent draws -->
+    <!-- Recent draws (all combined) -->
     <div class="card">
       <div class="card-title" id="recent-title" style="color:var(--muted);margin-bottom:10px"></div>
       <div class="overflow-x"><table id="draws-table">
         <thead><tr>
-          <th>Date</th><th>Day</th><th>D1</th><th>D2</th><th>D3</th><th>FB</th>
+          <th>Date</th><th>Day</th><th></th><th>D1</th><th>D2</th><th>D3</th><th>FB</th>
         </tr></thead>
         <tbody id="draws-tbody"></tbody>
       </table></div>
@@ -322,23 +289,21 @@
 
 <script>
 // ─── Constants ────────────────────────────────────────────────────────────────
-const DAYS     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const DAYS_FULL= ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const DIGITS   = [0,1,2,3,4,5,6,7,8,9];
+const DAYS      = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYS_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DIGITS    = [0,1,2,3,4,5,6,7,8,9];
+const LS_KEY    = 'il_algo_recs';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let allDraws = [];
-let activeTab = 'midday';
 
 // ─── Data loading ─────────────────────────────────────────────────────────────
 async function init() {
   setLoading(true);
   clearError();
   try {
-    // Fetch the pre-built JSON committed by the scraper
-    // draws.json is deployed alongside index.html in the same directory
     const res = await fetch('draws.json?' + Date.now());
-    if (!res.ok) throw new Error(`HTTP ${res.status} — draws.json not found. Run the scraper first (see README).`);
+    if (!res.ok) throw new Error(`HTTP ${res.status} — draws.json not found. Run the scraper first.`);
     const json = await res.json();
     allDraws = json.draws || [];
     if (allDraws.length === 0) throw new Error('No draws in data file.');
@@ -354,10 +319,6 @@ async function init() {
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
-function filtered(type) {
-  return allDraws.filter(d => d.type === type);
-}
-
 function heatmap(draws, useFb=false) {
   const map = Array.from({length:7}, ()=>Array(10).fill(0));
   for (const d of draws) {
@@ -372,7 +333,7 @@ function drawsAgo(draws) {
   // On the same date, evening is more recent than midday.
   const sorted = [...draws].sort((a, b) => {
     if (a.date !== b.date) return b.date.localeCompare(a.date);
-    return a.type === 'evening' ? -1 : 1; // evening first (newer on same date)
+    return a.type === 'evening' ? -1 : 1;
   });
 
   const dLastIdx = {}, fbLastIdx = {};
@@ -397,15 +358,11 @@ function drawsAgo(draws) {
   return { digits, fireball };
 }
 
-function recommend(type, dow) {
-  // Heatmap: use only the matching draw type so day-of-week frequency is clean
-  const draws = filtered(type);
-  const hm  = heatmap(draws, false);
-  const fhm = heatmap(draws, true);
-
-  // Recency: combined midday + evening rolling sequence (avoids "overdue for midday
-  // but hit in evening 2 draws ago" blind spot)
-  const od = drawsAgo(allDraws);
+function recommend(dow) {
+  // Both heatmap and recency use the full combined draw set
+  const hm  = heatmap(allDraws, false);
+  const fhm = heatmap(allDraws, true);
+  const od  = drawsAgo(allDraws);
 
   // Normalise each signal to 0–1 so weights are meaningful regardless of scale
   const maxHm  = Math.max(...DIGITS.map(d => hm[dow][d]))    || 1;
@@ -420,6 +377,123 @@ function recommend(type, dow) {
   const top3  = [...DIGITS].sort((a, b) => score(b)   - score(a)).slice(0, 3);
   const topFb = [...DIGITS].sort((a, b) => fbScore(b) - fbScore(a))[0];
   return { pick3: top3, fireball: topFb };
+}
+
+// ─── Recommendation tracking ──────────────────────────────────────────────────
+function loadRecs() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveRecs(pick3, fireball) {
+  const today  = new Date().toISOString().split('T')[0];
+  const stored = loadRecs();
+  let changed  = false;
+
+  for (const type of ['midday', 'evening']) {
+    if (stored.some(r => r.date === today && r.type === type)) continue;
+    // Skip if the actual draw is already in our dataset (page loaded after drawing)
+    if (allDraws.some(d => d.date === today && d.type === type)) continue;
+    stored.push({ date: today, type, pick3: [...pick3], fireball });
+    changed = true;
+  }
+
+  if (changed) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 90);
+    const pruned = stored.filter(r => new Date(r.date + 'T00:00:00') >= cutoff);
+    localStorage.setItem(LS_KEY, JSON.stringify(pruned));
+  }
+}
+
+function scoreRecs() {
+  const recs   = loadRecs();
+  const lookup = {};
+  for (const d of allDraws) lookup[`${d.date}_${d.type}`] = d;
+
+  return recs.map(rec => {
+    const actual = lookup[`${rec.date}_${rec.type}`];
+    if (!actual) return { ...rec, evaluated: false };
+    return {
+      ...rec,
+      evaluated: true,
+      fbHit: rec.fireball === actual.fireball,
+      // "any digit hit" — did any of our 3 recommended Pick3 digits appear in the draw?
+      p3Hit: rec.pick3.some(n => actual.digits.includes(n)),
+      actual,
+    };
+  }).sort((a, b) => {
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
+    return a.type === 'evening' ? -1 : 1; // evening more recent on same date
+  });
+}
+
+function renderAlgoHealth() {
+  const card   = document.getElementById('algo-health-card');
+  const all    = scoreRecs();
+  const scored = all.filter(r => r.evaluated);
+  const win20  = scored.slice(0, 20); // most recent 20 evaluated draws
+
+  if (win20.length < 2) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const n      = win20.length;
+  const fbHits = win20.filter(r => r.fbHit).length;
+  const p3Hits = win20.filter(r => r.p3Hit).length;
+  const fbRate = fbHits / n;
+  const p3Rate = p3Hits / n;
+
+  // Fireball baseline: 1/10 = 10% (one digit out of 10)
+  // Pick3 "any hit" baseline: 1 − (7/10)³ ≈ 65.7%
+  //   (prob that at least 1 of 3 recommended digits appears in a 3-digit draw with replacement)
+  const FB_BASE = 0.10;
+  const P3_BASE = 0.657;
+
+  const pct = v => `${Math.round(v * 100)}%`;
+  const delta = (rate, base) => {
+    const d = Math.round((rate - base) * 100);
+    const s = d >= 0 ? '+' : '';
+    const c = d > 2 ? 'var(--green)' : d < -2 ? '#ff5555' : '#666';
+    return `<span style="color:${c}">${s}${d}% vs ${pct(base)} baseline</span>`;
+  };
+
+  const pending = all.filter(r => !r.evaluated).length;
+  document.getElementById('health-sub').textContent =
+    `rolling last ${n} draws · ${pending} pending result${pending !== 1 ? 's' : ''}`;
+
+  document.getElementById('health-stats').innerHTML = `
+    <div class="health-stat">
+      <div class="health-stat-label">🔥 FIREBALL</div>
+      <div class="health-stat-count">${fbHits}/${n}&nbsp;&nbsp;(${pct(fbRate)})</div>
+      <div class="health-stat-vs">${delta(fbRate, FB_BASE)}</div>
+    </div>
+    <div class="health-stat">
+      <div class="health-stat-label">PICK 3 ANY</div>
+      <div class="health-stat-count">${p3Hits}/${n}&nbsp;&nbsp;(${pct(p3Rate)})</div>
+      <div class="health-stat-vs">${delta(p3Rate, P3_BASE)}</div>
+    </div>
+  `;
+
+  const rows = win20.map(rec => {
+    const dt = new Date(rec.date + 'T12:00:00');
+    const ds = dt.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const ti = rec.type === 'midday' ? '☀️' : '🌙';
+    const pc = rec.p3Hit ? 'var(--green)' : '#ff5555';
+    const fc = rec.fbHit ? 'var(--green)' : '#ff5555';
+    return `<tr>
+      <td style="color:#777;white-space:nowrap">${ds}&nbsp;${ti}</td>
+      <td><span style="color:#aaa">${rec.pick3.join(',')}</span>&nbsp;<span style="color:var(--orange)">🔥${rec.fireball}</span></td>
+      <td><span style="color:#888">${rec.actual.digits.join('-')}</span>&nbsp;<span style="color:var(--orange)">🔥${rec.actual.fireball}</span></td>
+      <td style="text-align:center;color:${pc};font-weight:700">${rec.p3Hit ? '✓' : '✗'}</td>
+      <td style="text-align:center;color:${fc};font-weight:700">${rec.fbHit ? '✓' : '✗'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('health-log').innerHTML = `
+    <table class="health-table">
+      <thead><tr><th>Draw</th><th>Rec</th><th>Actual</th><th>P3</th><th>FB</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
 // ─── Heat color: gamma-curved min→max, dark navy → blue → orange → bright yellow
@@ -443,7 +517,7 @@ function heatColor(val, min, max) {
   if (!val) return '#04040f';
   if (max <= min) return `rgb(${HEAT_STOPS[3].join(',')})`;
   const tLin = Math.max(0, Math.min(1, (val - min) / (max - min)));
-  const t    = Math.pow(tLin, HEAT_GAMMA);   // curve: compress low, expand high
+  const t    = Math.pow(tLin, HEAT_GAMMA);
   const s    = t * (HEAT_STOPS.length - 1);
   const i    = Math.min(Math.floor(s), HEAT_STOPS.length - 2);
   const [r, g, b] = lerpRGB(HEAT_STOPS[i], HEAT_STOPS[i + 1], s - i);
@@ -454,79 +528,70 @@ function heatTextColor(val, min, max) {
   if (max <= min) return '#111';
   const tLin = Math.max(0, Math.min(1, (val - min) / (max - min)));
   const t    = Math.pow(tLin, HEAT_GAMMA);
-  return t > 0.60 ? '#111' : '#fff';   // dark text on bright yellow end
+  return t > 0.60 ? '#111' : '#fff';
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 function render() {
   const today = new Date();
-  const dow = today.getDay();
+  const dow   = today.getDay();
   document.getElementById('rec-label').textContent = `Today's Picks — ${DAYS_FULL[dow]}`;
 
-  for (const type of ['midday', 'evening']) {
-    const rec  = recommend(type, dow);
-    const isM  = type === 'midday';
-    const accent = isM ? '#00ccff' : '#bb88ff';
+  const rec = recommend(dow);
 
-    // Rec card — pick3 and fireball on same row
-    document.getElementById(`rec-${type}`).innerHTML = `
-      <div class="rec-header">
-        <span style="font-size:18px">${isM ? '☀️' : '🌙'}</span>
-        <div>
-          <div class="rec-type" style="color:${accent}">${type.toUpperCase()}</div>
-          <div class="rec-day">${DAYS_FULL[dow]}</div>
+  // Save this recommendation for algo health tracking (no-op if already saved today)
+  saveRecs(rec.pick3, rec.fireball);
+
+  // Single rec card — same combined picks apply to both drawings
+  document.getElementById('rec-card').innerHTML = `
+    <div class="rec-header">
+      <span style="font-size:20px">🎯</span>
+      <div>
+        <div class="rec-type" style="color:var(--cyan)">Today's Picks</div>
+        <div class="rec-day">${DAYS_FULL[dow]} &nbsp;·&nbsp; ☀️ midday &amp; 🌙 evening</div>
+      </div>
+    </div>
+    <div class="picks-row">
+      <div>
+        <div class="rec-label">PICK 3</div>
+        <div style="display:flex;gap:8px">
+          ${rec.pick3.map(d => `<div class="ball">${d}</div>`).join('')}
         </div>
       </div>
-      <div class="picks-row">
-        <div>
-          <div class="rec-label">PICK 3</div>
-          <div style="display:flex;gap:8px">
-            ${rec.pick3.map(d => `<div class="ball ${type}">${d}</div>`).join('')}
-          </div>
-        </div>
-        <div class="picks-divider"></div>
-        <div>
-          <div class="rec-label">FIREBALL</div>
-          <div class="fireball-ball">${rec.fireball}</div>
-        </div>
+      <div class="picks-divider"></div>
+      <div>
+        <div class="rec-label">FIREBALL</div>
+        <div class="fireball-ball">${rec.fireball}</div>
       </div>
-    `;
-  }
+    </div>
+  `;
 
-  renderTab();
-}
+  // Algo health
+  renderAlgoHealth();
 
-function renderTab() {
-  const draws = filtered(activeTab);
-  const isM = activeTab === 'midday';
+  // Heatmaps (combined allDraws)
+  renderHeatmap('heatmap-pick3', heatmap(allDraws, false));
+  renderHeatmap('heatmap-fb',    heatmap(allDraws, true));
 
-  // Heatmaps
-  const pick3Title = document.getElementById('heatmap-pick3-title');
-  const fbTitle    = document.getElementById('heatmap-fb-title');
-  pick3Title.textContent = `${activeTab} — pick 3 frequency`;
-  pick3Title.style.color = isM ? 'var(--cyan)' : 'var(--purple)';
-  fbTitle.textContent    = `${activeTab} — fireball frequency`;
-  fbTitle.style.color    = 'var(--orange)';
-  renderHeatmap('heatmap-pick3', heatmap(draws, false));
-  renderHeatmap('heatmap-fb',    heatmap(draws, true));
+  // Overdue (combined allDraws)
+  renderOverdue(drawsAgo(allDraws));
 
-  // Overdue — always use the full combined sequence so a digit drawn in the
-  // opposite session (e.g. evening vs midday) isn't shown as stale.
-  const od = drawsAgo(allDraws);
-  renderOverdue(od);
-
-  // Recent table
+  // Recent draws — all sessions combined, most recent first
   document.getElementById('recent-title').textContent =
-    `Recent ${activeTab} draws (${draws.length} total)`;
+    `Recent draws — all sessions (${allDraws.length} total)`;
   const tbody = document.getElementById('draws-tbody');
   tbody.innerHTML = '';
-  const recent = [...draws].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,20);
+  const recent = [...allDraws].sort((a, b) => {
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
+    return a.type === 'evening' ? -1 : 1;
+  }).slice(0, 30);
   for (const d of recent) {
-    const dt = new Date(d.date+'T12:00:00');
+    const dt = new Date(d.date + 'T12:00:00');
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-size:11px;color:#777">${dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'})}</td>
       <td style="font-size:11px;color:#444">${DAYS[d.dayOfWeek]}</td>
+      <td style="font-size:11px">${d.type === 'midday' ? '☀️' : '🌙'}</td>
       ${d.digits.map(n=>`<td><span class="d-ball">${n}</span></td>`).join('')}
       <td><span class="fb-ball">${d.fireball}</span></td>
     `;
@@ -591,16 +656,6 @@ function renderOverdue(od) {
       }).join('');
     grid.appendChild(div);
   }
-}
-
-// ─── Tab switch ───────────────────────────────────────────────────────────────
-function switchTab(tab) {
-  activeTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(btn=>{
-    btn.classList.remove('active');
-    if (btn.dataset.tab===tab) btn.classList.add('active');
-  });
-  if (allDraws.length>0) renderTab();
 }
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
