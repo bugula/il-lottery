@@ -300,7 +300,8 @@
 
     <!-- Overdue -->
     <div class="card" style="border-color:rgba(255,160,0,0.15)">
-      <div class="card-title" style="color:var(--gold);margin-bottom:14px">Overdue Numbers</div>
+      <div class="card-title" style="color:var(--gold);margin-bottom:4px">Overdue Numbers</div>
+      <div class="card-sub" style="margin-bottom:14px">draws since last seen · midday + evening combined · × = draw count</div>
       <div id="overdue-grid"></div>
     </div>
 
@@ -366,50 +367,58 @@ function heatmap(draws, useFb=false) {
   return map;
 }
 
-function overdue(draws) {
-  // Track the most-recent DATE each digit/fireball appeared
-  const dLastDate = {}, fbLastDate = {};
-  DIGITS.forEach(d => { dLastDate[d] = null; fbLastDate[d] = null; });
+function drawsAgo(draws) {
+  // Merge midday + evening into one chronological sequence, most-recent first.
+  // On the same date, evening is more recent than midday.
+  const sorted = [...draws].sort((a, b) => {
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
+    return a.type === 'evening' ? -1 : 1; // evening first (newer on same date)
+  });
 
-  const sorted = [...draws].sort((a, b) => b.date.localeCompare(a.date));
-  for (const draw of sorted) {
+  const dLastIdx = {}, fbLastIdx = {};
+  DIGITS.forEach(d => { dLastIdx[d] = null; fbLastIdx[d] = null; });
+
+  for (let i = 0; i < sorted.length; i++) {
+    const draw = sorted[i];
     for (const d of draw.digits) {
-      if (dLastDate[d] === null) dLastDate[d] = draw.date;
+      if (dLastIdx[d] === null) dLastIdx[d] = i;
     }
-    if (fbLastDate[draw.fireball] === null) fbLastDate[draw.fireball] = draw.date;
-    // Early exit once every digit has been found
-    if (DIGITS.every(d => dLastDate[d] !== null) &&
-        DIGITS.every(d => fbLastDate[d] !== null)) break;
+    if (fbLastIdx[draw.fireball] === null) fbLastIdx[draw.fireball] = i;
+    if (DIGITS.every(d => dLastIdx[d] !== null) &&
+        DIGITS.every(d => fbLastIdx[d] !== null)) break;
   }
 
-  // Convert last-seen date → calendar days ago (using noon to avoid DST edge cases)
-  const todayMs = new Date().setHours(12, 0, 0, 0);
-  function daysSince(dateStr) {
-    if (!dateStr) return 9999; // never seen in dataset
-    return Math.max(0, Math.round((todayMs - new Date(dateStr + 'T12:00:00')) / 86400000));
-  }
-
+  // Index = draws ago (0 = appeared in the most recent draw)
   const digits = {}, fireball = {};
   DIGITS.forEach(d => {
-    digits[d]   = daysSince(dLastDate[d]);
-    fireball[d] = daysSince(fbLastDate[d]);
+    digits[d]   = dLastIdx[d]  ?? 9999;
+    fireball[d] = fbLastIdx[d] ?? 9999;
   });
   return { digits, fireball };
 }
 
 function recommend(type, dow) {
+  // Heatmap: use only the matching draw type so day-of-week frequency is clean
   const draws = filtered(type);
   const hm  = heatmap(draws, false);
   const fhm = heatmap(draws, true);
-  const od  = overdue(draws);
-  const maxOD = Math.max(...DIGITS.map(d=>od.digits[d]))||1;
-  const maxFB = Math.max(...DIGITS.map(d=>od.fireball[d]))||1;
 
-  const score = d => hm[dow][d]*2 + (od.digits[d]/maxOD)*3;
-  const fbScore = d => fhm[dow][d]*2 + (od.fireball[d]/maxFB)*3;
+  // Recency: combined midday + evening rolling sequence (avoids "overdue for midday
+  // but hit in evening 2 draws ago" blind spot)
+  const od = drawsAgo(allDraws);
 
-  const top3 = [...DIGITS].sort((a,b)=>score(b)-score(a)).slice(0,3);
-  const topFb = [...DIGITS].sort((a,b)=>fbScore(b)-fbScore(a))[0];
+  // Normalise each signal to 0–1 so weights are meaningful regardless of scale
+  const maxHm  = Math.max(...DIGITS.map(d => hm[dow][d]))    || 1;
+  const maxFhm = Math.max(...DIGITS.map(d => fhm[dow][d]))   || 1;
+  const maxOD  = Math.max(...DIGITS.map(d => od.digits[d]))  || 1;
+  const maxFB  = Math.max(...DIGITS.map(d => od.fireball[d]))|| 1;
+
+  // 85 % heatmap frequency (primary) + 15 % recency nudge (secondary)
+  const score   = d => (hm[dow][d]  / maxHm)  * 0.85 + (od.digits[d]   / maxOD) * 0.15;
+  const fbScore = d => (fhm[dow][d] / maxFhm) * 0.85 + (od.fireball[d] / maxFB) * 0.15;
+
+  const top3  = [...DIGITS].sort((a, b) => score(b)   - score(a)).slice(0, 3);
+  const topFb = [...DIGITS].sort((a, b) => fbScore(b) - fbScore(a))[0];
   return { pick3: top3, fireball: topFb };
 }
 
@@ -501,8 +510,9 @@ function renderTab() {
   renderHeatmap('heatmap-pick3', heatmap(draws, false));
   renderHeatmap('heatmap-fb',    heatmap(draws, true));
 
-  // Overdue
-  const od = overdue(draws);
+  // Overdue — always use the full combined sequence so a digit drawn in the
+  // opposite session (e.g. evening vs midday) isn't shown as stale.
+  const od = drawsAgo(allDraws);
   renderOverdue(od);
 
   // Recent table
@@ -576,7 +586,7 @@ function renderOverdue(od) {
             <div class="overdue-bar-wrap">
               <div class="overdue-bar" style="width:${ratio*100}%;background:${hot?col.hotBar:'#252535'}"></div>
             </div>
-            <div class="overdue-count">${val}d</div>
+            <div class="overdue-count">${val}×</div>
           </div>`;
       }).join('');
     grid.appendChild(div);
