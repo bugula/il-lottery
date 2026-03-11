@@ -407,17 +407,26 @@ function recommend(type, dow) {
   return { pick3: top3, fireball: topFb };
 }
 
-// ─── Heat color (blue = cold/rare → red = hot/frequent) ─────────────────────
-function heatColor(val, max) {
-  if (!val || !max) return '#04040f';  // zero — near-black
-  const r = val / max;
-  if (r < 0.12) return '#0b1840';      // very cold — dark navy
-  if (r < 0.27) return '#0d3a9a';      // cold — royal blue
-  if (r < 0.42) return '#1a6fd4';      // cool — medium blue
-  if (r < 0.57) return '#c07000';      // warm — amber (hard contrast break)
-  if (r < 0.72) return '#dd4400';      // hot — orange-red
-  if (r < 0.87) return '#f01800';      // very hot — red
-  return '#ff0022';                     // max — vivid red
+// ─── Heat color: smooth min→max lerp, blue (lowest) → orange → red (highest) ─
+function lerpRGB(c1, c2, t) {
+  return [
+    Math.round(c1[0] + (c2[0] - c1[0]) * t),
+    Math.round(c1[1] + (c2[1] - c1[1]) * t),
+    Math.round(c1[2] + (c2[2] - c1[2]) * t),
+  ];
+}
+function heatColor(val, min, max) {
+  if (!val) return '#04040f';                     // zero cells — near-black
+  if (max <= min) return 'rgb(255,17,0)';         // all values equal → just show red
+  const t = Math.max(0, Math.min(1, (val - min) / (max - min)));
+  // 3-stop: blue #1155ff → orange #ff9900 → red #ff1100
+  const COLD = [17,  85, 255];
+  const MID  = [255, 153,  0];
+  const HOT  = [255,  17,  0];
+  const [r, g, b] = t < 0.5
+    ? lerpRGB(COLD, MID, t * 2)
+    : lerpRGB(MID,  HOT, (t - 0.5) * 2);
+  return `rgb(${r},${g},${b})`;
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────────
@@ -496,7 +505,9 @@ function renderTab() {
 
 function renderHeatmap(id, map) {
   const table = document.getElementById(id);
-  const max = Math.max(...map.flat());
+  const nonZero = map.flat().filter(v => v > 0);
+  const min = nonZero.length ? Math.min(...nonZero) : 0;
+  const max = nonZero.length ? Math.max(...nonZero) : 1;
   table.innerHTML = `
     <thead><tr>
       <th class="day-head">Day</th>
@@ -508,9 +519,8 @@ function renderHeatmap(id, map) {
           <td class="day-label">${day}</td>
           ${DIGITS.map(d=>{
             const v = map[di][d];
-            const bg = heatColor(v, max);
-            const r = max ? v / max : 0;
-            const textColor = !v ? '#0d0d22' : r > 0.38 ? '#fff' : '#7aaaee';
+            const bg = heatColor(v, min, max);
+            const textColor = v ? '#fff' : '#0d0d22';
             return `<td class="heatmap-cell" style="background:${bg};color:${textColor};font-weight:${v?700:400}" title="${DAYS_FULL[di]} | ${d}: ${v} hits">${v||''}</td>`;
           }).join('')}
         </tr>`).join('')}
