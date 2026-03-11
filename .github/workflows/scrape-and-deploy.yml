@@ -1,10 +1,10 @@
 name: Scrape & Deploy
 
 on:
-  # Run after each Illinois Lottery drawing (midday ~12:40pm CT, evening ~9:22pm CT)
+  # Run after each Illinois Lottery drawing (midday ~12:40pm ET, evening ~9:22pm ET)
   schedule:
-    - cron: '0 18 * * *'   # 1:00pm CT — after midday draw
-    - cron: '30 2 * * *'   # 9:30pm CT — after evening draw
+    - cron: '55 16 * * *'  # 12:55pm ET (EDT=UTC-4) — after midday draw
+    - cron: '35 1 * * *'   #  9:35pm ET (EDT=UTC-4) — after evening draw
   # Run on push to master (seeds data on first deploy)
   push:
     branches: [master]
