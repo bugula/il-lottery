@@ -19,8 +19,8 @@
       --purple: #bb88ff;
       --green: #44dd88;
       --text: #d0d0e0;
-      --muted: #444;
-      --dim: #222;
+      --muted: #999;
+      --dim: #888;
     }
 
     body {
@@ -165,7 +165,7 @@
     .heatmap-table { border-collapse: separate; border-spacing: 2px; }
     .heatmap-table th { color: var(--muted); font-size: 11px; font-weight: 700; padding: 2px 8px; text-align: center; }
     .heatmap-table th.day-head { width: 32px; color: var(--dim); font-size: 10px; font-weight: 600; text-align: left; }
-    .heatmap-table td.day-label { color: #555; font-size: 10px; font-weight: 600; padding: 1px 4px; white-space: nowrap; }
+    .heatmap-table td.day-label { color: #888; font-size: 10px; font-weight: 600; padding: 1px 4px; white-space: nowrap; }
     .heatmap-cell {
       border-radius: 4px;
       text-align: center;
@@ -207,6 +207,59 @@
     #disclaimer { margin-top: 20px; font-size: 9px; color: #18182a; text-align: center; letter-spacing: 0.08em; }
     .overflow-x { overflow-x: auto; }
 
+    /* ── Analytics Lab toggle ── */
+    #lab-toggle-wrap { margin-bottom: 14px; }
+    #lab-toggle-btn {
+      background: rgba(180,120,255,0.07);
+      border: 1px solid rgba(180,120,255,0.18);
+      color: var(--purple);
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    #lab-toggle-btn:hover { background: rgba(180,120,255,0.14); }
+
+    /* ── Analytics Lab panels ── */
+    .lab-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .lab-2col .card { margin-bottom: 0; }
+    @media (max-width: 680px) { .lab-2col { grid-template-columns: 1fr; } }
+
+    /* Digit strip — used by BTB and form panels */
+    .lab-strip { display: flex; gap: 5px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+    .lab-strip-cell {
+      flex: 0 0 auto;
+      min-width: 54px;
+      border-radius: 7px;
+      padding: 8px 4px 6px;
+      text-align: center;
+      border: 1px solid rgba(0,0,0,0.22);
+    }
+    .lab-strip-digit { font-size: 15px; font-weight: 900; color: #fff; }
+    .lab-strip-pct   { font-size: 11px; font-weight: 700; margin-top: 3px; }
+    .lab-strip-sub   { font-size: 9px;  color: #888; margin-top: 2px; }
+    .lab-strip-arrow { font-size: 14px; margin-top: 2px; line-height: 1; }
+    .lab-legend      { font-size: 9px; color: #666; margin-top: 7px; letter-spacing: 0.06em; }
+
+    /* Gap distribution table */
+    .lab-gap-table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 400px; }
+    .lab-gap-table th { padding: 3px 10px; text-align: left; color: var(--dim); font-size: 10px; border-bottom: 1px solid #111; font-weight: 600; letter-spacing: 0.06em; }
+    .lab-gap-table td { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.02); vertical-align: middle; }
+
+    /* ── Gap chart ── */
+    .gap-chart-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .gap-chart-col { flex:1; min-width:0; }
+    .gap-bar-track { position:relative; height:9px; background:#0c0c1c; border-radius:5px; margin-bottom:4px; overflow:visible; }
+    .gap-iqr       { position:absolute; top:0; bottom:0; background:rgba(80,110,180,0.35); border-radius:3px; pointer-events:none; }
+    .gap-fill      { position:absolute; top:0; bottom:0; left:0; border-radius:5px; }
+    .gap-tick      { position:absolute; top:-3px; bottom:-3px; width:2px; background:#444; border-radius:1px; pointer-events:none; }
+    .gap-stats     { font-size:9px; letter-spacing:0.04em; }
+
     @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
     @keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
     .fade-in { animation: fadeIn 0.35s ease forwards; }
@@ -243,14 +296,6 @@
     <div class="section-label" id="rec-label"></div>
     <div id="rec-card" class="rec-card"></div>
 
-    <!-- Algo Health (shown once tracking data accumulates) -->
-    <div class="card" id="algo-health-card" style="display:none;border-color:rgba(68,221,136,0.12)">
-      <div class="card-title" style="color:var(--green);margin-bottom:4px">Algo Health</div>
-      <div class="card-sub" id="health-sub" style="margin-bottom:12px"></div>
-      <div id="health-stats"></div>
-      <div id="health-log" class="overflow-x" style="margin-top:14px"></div>
-    </div>
-
     <!-- Heatmaps (combined midday + evening, side by side) -->
     <div id="heatmap-row">
       <div class="card">
@@ -272,6 +317,14 @@
       <div id="overdue-grid"></div>
     </div>
 
+    <!-- Algo Health (shown once tracking data accumulates) -->
+    <div class="card" id="algo-health-card" style="display:none;border-color:rgba(68,221,136,0.12)">
+      <div class="card-title" style="color:var(--green);margin-bottom:4px">Algo Health</div>
+      <div class="card-sub" id="health-sub" style="margin-bottom:12px"></div>
+      <div id="health-stats"></div>
+      <div id="health-log" class="overflow-x" style="margin-top:14px"></div>
+    </div>
+
     <!-- Recent draws (all combined) -->
     <div class="card">
       <div class="card-title" id="recent-title" style="color:var(--muted);margin-bottom:10px"></div>
@@ -281,6 +334,58 @@
         </tr></thead>
         <tbody id="draws-tbody"></tbody>
       </table></div>
+    </div>
+
+    <!-- Analytics Lab toggle -->
+    <div id="lab-toggle-wrap">
+      <button id="lab-toggle-btn" onclick="toggleLab()">🔬 Analytics Lab &nbsp;<span id="lab-arrow">▾</span></button>
+    </div>
+
+    <!-- Analytics Lab (collapsed by default, state persisted in localStorage) -->
+    <div id="analytics-lab" style="display:none">
+
+      <!-- Row 1: Back-to-back repeat rates -->
+      <div class="lab-2col">
+        <div class="card">
+          <div class="card-title" style="color:var(--orange)">Fireball Repeat Rate</div>
+          <div class="card-sub">how often a digit follows itself in the very next draw · baseline 10%</div>
+          <div id="lab-fb-btb" class="overflow-x"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--cyan)">Pick 3 Repeat Rate</div>
+          <div class="card-sub">how often a digit reappears in Pick 3 of the next draw · baseline ~27%</div>
+          <div id="lab-p3-btb" class="overflow-x"></div>
+        </div>
+      </div>
+
+      <!-- Row 2: Recent 30-day form vs all-time -->
+      <div class="lab-2col">
+        <div class="card">
+          <div class="card-title" style="color:var(--orange)">Fireball — 30-Day Form</div>
+          <div class="card-sub">last 30 days hit rate vs all-time average · ↑↑ hot · ↓↓ cold</div>
+          <div id="lab-fb-form" class="overflow-x"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--cyan)">Pick 3 — 30-Day Form</div>
+          <div class="card-sub">last 30 days hit rate vs all-time average · ↑↑ hot · ↓↓ cold</div>
+          <div id="lab-p3-form" class="overflow-x"></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Pick 3 position frequency -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title" style="color:var(--cyan)">Pick 3 — Position Frequency</div>
+        <div class="card-sub">hit count per digit per draw position · in multi-bottle: D1 = 2nd prize · D2 = 3rd · D3 = 4th</div>
+        <div class="overflow-x"><table class="heatmap-table" id="lab-pos-table"></table></div>
+      </div>
+
+      <!-- Row 4: Fireball gap distribution -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title" style="color:var(--gold)">Fireball Gap Distribution</div>
+        <div class="card-sub">draws since last appearance · blue band = typical range (p25–p75) · orange = overdue · sorted most overdue first</div>
+        <div id="lab-gap-table"></div>
+      </div>
+
     </div>
 
     <div id="disclaimer">FOR ENTERTAINMENT ONLY · LOTTERY IS RANDOM · MUST BE 18+</div>
@@ -496,7 +601,7 @@ function renderAlgoHealth() {
     document.getElementById('health-sub').textContent =
       `tracking started · ${pending} draw${pending !== 1 ? 's' : ''} pending results`;
     document.getElementById('health-stats').innerHTML = `
-      <div style="font-size:11px;color:#555;padding:6px 0;line-height:1.7">
+      <div style="font-size:11px;color:#888;padding:6px 0;line-height:1.7">
         Picks are being recorded each time you load the page before a drawing closes.<br>
         Results will appear here automatically after the next drawing completes.
       </div>`;
@@ -547,9 +652,9 @@ function renderAlgoHealth() {
     const pc = rec.p3Hit ? 'var(--green)' : '#ff5555';
     const fc = rec.fbHit ? 'var(--green)' : '#ff5555';
     return `<tr>
-      <td style="color:#777;white-space:nowrap">${ds}&nbsp;${ti}</td>
-      <td><span style="color:#aaa">${rec.pick3.join(',')}</span>&nbsp;<span style="color:var(--orange)">🔥${rec.fireball}</span></td>
-      <td><span style="color:#888">${rec.actual.digits.join('-')}</span>&nbsp;<span style="color:var(--orange)">🔥${rec.actual.fireball}</span></td>
+      <td style="color:#aaa;white-space:nowrap">${ds}&nbsp;${ti}</td>
+      <td><span style="color:#ccc">${rec.pick3.join(',')}</span>&nbsp;<span style="color:var(--orange)">🔥${rec.fireball}</span></td>
+      <td><span style="color:#bbb">${rec.actual.digits.join('-')}</span>&nbsp;<span style="color:var(--orange)">🔥${rec.actual.fireball}</span></td>
       <td style="text-align:center;color:${pc};font-weight:700">${rec.p3Hit ? '✓' : '✗'}</td>
       <td style="text-align:center;color:${fc};font-weight:700">${rec.fbHit ? '✓' : '✗'}</td>
     </tr>`;
@@ -645,6 +750,9 @@ function render() {
   // Overdue (combined allDraws)
   renderOverdue(drawsAgo(allDraws));
 
+  // Analytics Lab — re-render if already expanded
+  if (document.getElementById('analytics-lab').style.display !== 'none') renderLab();
+
   // Recent draws — all sessions combined, most recent first
   document.getElementById('recent-title').textContent =
     `Recent draws — all sessions (${allDraws.length} total)`;
@@ -658,8 +766,8 @@ function render() {
     const dt = new Date(d.date + 'T12:00:00');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="font-size:11px;color:#777">${dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'})}</td>
-      <td style="font-size:11px;color:#444">${DAYS[d.dayOfWeek]}</td>
+      <td style="font-size:11px;color:#aaa">${dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'})}</td>
+      <td style="font-size:11px;color:#777">${DAYS[d.dayOfWeek]}</td>
       <td style="font-size:11px">${d.type === 'midday' ? '☀️' : '🌙'}</td>
       ${d.digits.map(n=>`<td><span class="d-ball">${n}</span></td>`).join('')}
       <td><span class="fb-ball">${d.fireball}</span></td>
@@ -747,8 +855,272 @@ function clearError() {
   document.getElementById('error-box').style.display = 'none';
 }
 
+// ─── Analytics Lab ────────────────────────────────────────────────────────────
+const LAB_LS_KEY = 'il_lab_open';
+
+function toggleLab() {
+  const lab   = document.getElementById('analytics-lab');
+  const arrow = document.getElementById('lab-arrow');
+  const isOpen = lab.style.display !== 'none';
+  if (isOpen) {
+    lab.style.display = 'none';
+    arrow.textContent = '▸';
+    localStorage.setItem(LAB_LS_KEY, '0');
+  } else {
+    lab.style.display = 'block';
+    arrow.textContent = '▾';
+    localStorage.setItem(LAB_LS_KEY, '1');
+    renderLab();
+  }
+}
+
+function initLabState() {
+  const open  = localStorage.getItem(LAB_LS_KEY) === '1';
+  const lab   = document.getElementById('analytics-lab');
+  const arrow = document.getElementById('lab-arrow');
+  if (open) {
+    lab.style.display = 'block';
+    arrow.textContent = '▾';
+  } else {
+    arrow.textContent = '▸';
+  }
+}
+
+// Draws sorted oldest→newest (midday before evening on same date)
+function chronoDraws() {
+  return [...allDraws].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.type === 'midday' ? -1 : 1;
+  });
+}
+
+// ── Back-to-back repeat rate ──────────────────────────────────────────────────
+// For each draw pair (i, i+1), count how often a value from draw[i] recurs in draw[i+1].
+function btbRate(seq, getSet) {
+  const counts = {};
+  DIGITS.forEach(d => { counts[d] = { followed: 0, total: 0 }; });
+  for (let i = 0; i < seq.length - 1; i++) {
+    const prev = getSet(seq[i]);
+    const next = getSet(seq[i + 1]);
+    for (const d of prev) {
+      counts[d].total++;
+      if (next.has(d)) counts[d].followed++;
+    }
+  }
+  return counts;
+}
+
+function renderStrip(containerId, cells) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = `
+    <div class="lab-strip">${cells.map(c => c.html).join('')}</div>
+    <div class="lab-legend">${cells[0]?.legend || ''}</div>
+  `;
+}
+
+function btbCell(d, counts, baseline) {
+  const { followed, total } = counts[d];
+  if (total === 0) return {
+    html: `<div class="lab-strip-cell" style="background:#0a0a18;border-color:#111">
+      <div class="lab-strip-digit">${d}</div>
+      <div class="lab-strip-pct" style="color:#333">—</div>
+      <div class="lab-strip-sub">n/a</div></div>`,
+    legend: `BASELINE ${Math.round(baseline * 100)}% · n = draws where digit appeared · ↑ hot · ↓ cold`,
+  };
+  const rate  = followed / total;
+  const delta = rate - baseline;
+  const hot   = delta >  0.05, cold = delta < -0.05;
+  const color  = hot ? 'var(--orange)' : cold ? '#5577aa' : '#aaa';
+  const arrow  = hot ? '↑' : cold ? '↓' : '→';
+  const bg     = hot ? 'rgba(255,100,0,0.08)' : cold ? 'rgba(30,60,120,0.15)' : 'rgba(255,255,255,0.03)';
+  const border = hot ? 'rgba(255,100,0,0.25)'  : cold ? 'rgba(50,100,200,0.2)' : 'rgba(255,255,255,0.06)';
+  return {
+    html: `<div class="lab-strip-cell" style="background:${bg};border-color:${border}">
+      <div class="lab-strip-digit">${d}</div>
+      <div class="lab-strip-pct" style="color:${color}">${Math.round(rate*100)}%</div>
+      <div class="lab-strip-sub">${total}×</div>
+      <div class="lab-strip-arrow" style="color:${color}">${arrow}</div></div>`,
+    legend: `BASELINE ${Math.round(baseline * 100)}% · n = draws where digit appeared · ↑ hot · ↓ cold`,
+  };
+}
+
+function renderLabFbBtb() {
+  const seq    = chronoDraws();
+  const counts = btbRate(seq, d => new Set([d.fireball]));
+  renderStrip('lab-fb-btb', DIGITS.map(d => btbCell(d, counts, 0.10)));
+}
+
+function renderLabP3Btb() {
+  const seq      = chronoDraws();
+  const baseline = 1 - Math.pow(0.9, 3); // ~27%
+  const counts   = btbRate(seq, d => new Set(d.digits));
+  renderStrip('lab-p3-btb', DIGITS.map(d => btbCell(d, counts, baseline)));
+}
+
+// ── 30-Day Form ───────────────────────────────────────────────────────────────
+function formRates(draws, getHits, weight) {
+  const cutStr = (() => {
+    const c = new Date(); c.setDate(c.getDate() - 30); return c.toISOString().slice(0, 10);
+  })();
+  const allCnt = Array(10).fill(0), rcntCnt = Array(10).fill(0);
+  let allTot = 0, rcntTot = 0;
+  for (const d of draws) {
+    allTot += weight;
+    for (const v of getHits(d)) allCnt[v]++;
+    if (d.date >= cutStr) {
+      rcntTot += weight;
+      for (const v of getHits(d)) rcntCnt[v]++;
+    }
+  }
+  return DIGITS.map(d => ({
+    d,
+    allRate:  allTot  > 0 ? allCnt[d]  / allTot  : 0,
+    rcntRate: rcntTot > 0 ? rcntCnt[d] / rcntTot : 0,
+  }));
+}
+
+function formCell(d, allRate, rcntRate) {
+  const delta = rcntRate - allRate;
+  const vHot  = delta >  0.06, hot  = delta >  0.03;
+  const vCold = delta < -0.06, cold = delta < -0.03;
+  const color  = vHot ? 'var(--orange)' : hot ? '#ffcc44' : vCold ? '#4488ff' : cold ? '#7799cc' : '#aaa';
+  const arrow  = vHot ? '↑↑' : hot ? '↑' : vCold ? '↓↓' : cold ? '↓' : '→';
+  const bg     = hot  ? 'rgba(255,100,0,0.08)'  : cold ? 'rgba(30,60,120,0.15)' : 'rgba(255,255,255,0.03)';
+  const border = hot  ? 'rgba(255,100,0,0.25)'  : cold ? 'rgba(50,100,200,0.2)' : 'rgba(255,255,255,0.06)';
+  const dStr   = (delta >= 0 ? '+' : '') + Math.round(delta * 100) + '%';
+  return {
+    html: `<div class="lab-strip-cell" style="background:${bg};border-color:${border}">
+      <div class="lab-strip-digit">${d}</div>
+      <div class="lab-strip-pct" style="color:${color}">${Math.round(rcntRate*100)}%</div>
+      <div class="lab-strip-sub" style="color:${color}">${dStr}</div>
+      <div class="lab-strip-arrow" style="color:${color}">${arrow}</div></div>`,
+    legend: '30-DAY HIT RATE vs ALL-TIME · ↑↑ very hot · ↑ hot · → neutral · ↓ cold · ↓↓ very cold',
+  };
+}
+
+function renderLabFbForm() {
+  const rates = formRates(allDraws, d => [d.fireball], 1);
+  renderStrip('lab-fb-form', rates.map(({ d, allRate, rcntRate }) => formCell(d, allRate, rcntRate)));
+}
+
+function renderLabP3Form() {
+  const rates = formRates(allDraws, d => d.digits, 3);
+  renderStrip('lab-p3-form', rates.map(({ d, allRate, rcntRate }) => formCell(d, allRate, rcntRate)));
+}
+
+// ── Position Frequency ────────────────────────────────────────────────────────
+function renderLabPosTable() {
+  const pos = Array.from({length: 3}, () => Array(10).fill(0));
+  for (const d of allDraws) {
+    for (let i = 0; i < 3; i++) pos[i][d.digits[i]]++;
+  }
+  const flat = pos.flat().filter(v => v > 0);
+  const min  = flat.length ? Math.min(...flat) : 0;
+  const max  = flat.length ? Math.max(...flat) : 1;
+
+  document.getElementById('lab-pos-table').innerHTML = `
+    <thead><tr>
+      <th class="day-head">Pos</th>
+      ${DIGITS.map(d => `<th>${d}</th>`).join('')}
+    </tr></thead>
+    <tbody>
+      ${['D1','D2','D3'].map((label, pi) => `
+        <tr>
+          <td class="day-label">${label}</td>
+          ${DIGITS.map(d => {
+            const v = pos[pi][d];
+            return `<td class="heatmap-cell"
+              style="background:${heatColor(v,min,max)};color:${heatTextColor(v,min,max)};font-weight:${v?700:400}"
+              title="${label} | ${d}: ${v} hits">${v||''}</td>`;
+          }).join('')}
+        </tr>`).join('')}
+    </tbody>`;
+}
+
+// ── Fireball Gap Distribution ─────────────────────────────────────────────────
+function pct(arr, p) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const i = (p / 100) * (s.length - 1);
+  const lo = Math.floor(i), hi = Math.ceil(i);
+  return Math.round(s[lo] + (s[hi] - s[lo]) * (i - lo));
+}
+
+function renderLabGapTable() {
+  const seq = chronoDraws();
+  const app = {};
+  DIGITS.forEach(d => { app[d] = []; });
+  for (let i = 0; i < seq.length; i++) app[seq[i].fireball].push(i);
+
+  // Sort most overdue first
+  const sorted = [...DIGITS].sort((a, b) => {
+    const ca = app[a].length ? seq.length - 1 - app[a][app[a].length - 1] : -1;
+    const cb = app[b].length ? seq.length - 1 - app[b][app[b].length - 1] : -1;
+    return cb - ca;
+  });
+
+  // Global max for a shared scale across all digits
+  const allMaxGaps = sorted.map(d => {
+    let mx = 0;
+    for (let i = 1; i < app[d].length; i++) mx = Math.max(mx, app[d][i] - app[d][i-1] - 1);
+    return mx;
+  });
+  const globalMax = Math.max(...allMaxGaps, 1);
+
+  const rows = sorted.map(d => {
+    const gaps = [];
+    for (let i = 1; i < app[d].length; i++) gaps.push(app[d][i] - app[d][i-1] - 1);
+    const cur  = app[d].length ? seq.length - 1 - app[d][app[d].length - 1] : null;
+    const p25  = pct(gaps, 25), p50 = pct(gaps, 50), p75 = pct(gaps, 75);
+    const gMax = gaps.length ? Math.max(...gaps) : 0;
+
+    const overdue  = cur !== null && gaps.length && cur > p75;
+    const cold     = cur !== null && gaps.length && cur < p25;
+    const fillPct  = cur !== null ? Math.min(100, (cur / globalMax) * 100).toFixed(1) : 0;
+    const iqrLeft  = ((p25 / globalMax) * 100).toFixed(1);
+    const iqrW     = (Math.max(0, (p75 - p25) / globalMax) * 100).toFixed(1);
+    const medLeft  = ((p50 / globalMax) * 100).toFixed(1);
+
+    const fillClr  = overdue ? 'var(--orange)' : cold ? '#223355' : '#2a4060';
+    const curColor = overdue ? 'var(--orange)' : cold ? '#5577aa' : 'var(--text)';
+
+    return `
+      <div class="gap-chart-row">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;flex-shrink:0;border-radius:50%;background:linear-gradient(135deg,#991100,#ff6600);border:2px solid rgba(255,136,68,0.4);font-size:13px;font-weight:900;color:#fff">${d}</span>
+        <div class="gap-chart-col">
+          <div class="gap-bar-track">
+            <div class="gap-iqr"  style="left:${iqrLeft}%;width:${iqrW}%"></div>
+            <div class="gap-fill" style="width:${fillPct}%;background:${fillClr}"></div>
+            <div class="gap-tick" style="left:${medLeft}%"></div>
+          </div>
+          <div class="gap-stats">
+            <span style="color:${curColor};font-weight:700">${cur !== null ? cur+'×' : '—'} out</span>
+            <span style="color:#666"> · p25:${p25} · med:${p50} · p75:${p75} · max:${gMax}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('lab-gap-table').innerHTML = `
+    <div style="font-size:9px;color:#666;letter-spacing:0.06em;margin-bottom:10px">
+      BLUE BAND = typical range (p25–p75) · TICK = median · BAR = current gap · ORANGE = overdue
+    </div>
+    ${rows}`;
+}
+
+// ── Lab orchestrator ──────────────────────────────────────────────────────────
+function renderLab() {
+  renderLabFbBtb();
+  renderLabP3Btb();
+  renderLabFbForm();
+  renderLabP3Form();
+  renderLabPosTable();
+  renderLabGapTable();
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 init();
+initLabState();
 </script>
 </body>
 </html>
