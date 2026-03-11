@@ -110,19 +110,28 @@
     }
     .card-sub { font-size: 10px; color: var(--muted); margin-bottom: 12px; }
 
-    /* ── Two-column time-of-day layout ── */
+    /* ── Rec cards: always-visible 2-col grid ── */
     #time-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 680px) { #time-grid { grid-template-columns: 1fr; } }
+
+    /* ── Heatmap row (tab-controlled, side by side) ── */
+    #heatmap-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 14px;
       margin-bottom: 14px;
-      align-items: start;
     }
-    #time-grid > div { display: flex; flex-direction: column; gap: 10px; }
-    #time-grid .card { margin-bottom: 0; }
-    @media (max-width: 680px) {
-      #time-grid { grid-template-columns: 1fr; }
-    }
+    #heatmap-row .card { margin-bottom: 0; }
+    @media (max-width: 680px) { #heatmap-row { grid-template-columns: 1fr; } }
+
+    /* ── Rec card picks row (pick3 + fireball inline) ── */
+    .picks-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+    .picks-divider { width: 1px; height: 44px; background: rgba(255,255,255,0.07); align-self: center; flex-shrink: 0; }
     .rec-card {
       border-radius: 14px;
       padding: 18px 20px;
@@ -262,46 +271,31 @@
 
   <div id="dashboard" style="display:none">
 
-    <!-- Two-column layout: Midday | Evening (always visible, no tab needed) -->
+    <!-- Rec cards: both always visible -->
     <div class="section-label" id="rec-label"></div>
     <div id="time-grid">
-
-      <!-- ── Midday column ── -->
-      <div>
-        <div id="rec-midday" class="rec-card midday"></div>
-        <div class="card">
-          <div class="card-title" style="color:var(--cyan)">Pick 3 Frequency</div>
-          <div class="card-sub">Hit count per digit, per day of week</div>
-          <div class="overflow-x"><table class="heatmap-table" id="heatmap-midday-pick3"></table></div>
-        </div>
-        <div class="card">
-          <div class="card-title" style="color:var(--orange)">Fireball Frequency</div>
-          <div class="card-sub">Fireball digit hit count per day of week</div>
-          <div class="overflow-x"><table class="heatmap-table" id="heatmap-midday-fb"></table></div>
-        </div>
-      </div>
-
-      <!-- ── Evening column ── -->
-      <div>
-        <div id="rec-evening" class="rec-card evening"></div>
-        <div class="card">
-          <div class="card-title" style="color:var(--purple)">Pick 3 Frequency</div>
-          <div class="card-sub">Hit count per digit, per day of week</div>
-          <div class="overflow-x"><table class="heatmap-table" id="heatmap-evening-pick3"></table></div>
-        </div>
-        <div class="card">
-          <div class="card-title" style="color:var(--orange)">Fireball Frequency</div>
-          <div class="card-sub">Fireball digit hit count per day of week</div>
-          <div class="overflow-x"><table class="heatmap-table" id="heatmap-evening-fb"></table></div>
-        </div>
-      </div>
-
+      <div id="rec-midday" class="rec-card midday"></div>
+      <div id="rec-evening" class="rec-card evening"></div>
     </div>
 
-    <!-- Tab toggle — scopes Overdue + Recent draws only -->
+    <!-- Tab toggle: controls heatmaps + overdue + recent -->
     <div id="tab-bar">
       <button class="tab-btn active midday" data-tab="midday" onclick="switchTab('midday')">☀️ Midday</button>
       <button class="tab-btn evening" data-tab="evening" onclick="switchTab('evening')">🌙 Evening</button>
+    </div>
+
+    <!-- Heatmaps (tab-controlled, side by side) -->
+    <div id="heatmap-row">
+      <div class="card">
+        <div class="card-title" id="heatmap-pick3-title"></div>
+        <div class="card-sub">Hit count per digit, per day of week</div>
+        <div class="overflow-x"><table class="heatmap-table" id="heatmap-pick3"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-title" id="heatmap-fb-title"></div>
+        <div class="card-sub">Fireball digit hit count per day of week</div>
+        <div class="overflow-x"><table class="heatmap-table" id="heatmap-fb"></table></div>
+      </div>
     </div>
 
     <!-- Overdue -->
@@ -465,7 +459,7 @@ function render() {
     const isM  = type === 'midday';
     const accent = isM ? '#00ccff' : '#bb88ff';
 
-    // Rec card
+    // Rec card — pick3 and fireball on same row
     document.getElementById(`rec-${type}`).innerHTML = `
       <div class="rec-header">
         <span style="font-size:18px">${isM ? '☀️' : '🌙'}</span>
@@ -474,18 +468,20 @@ function render() {
           <div class="rec-day">${DAYS_FULL[dow]}</div>
         </div>
       </div>
-      <div class="rec-label">PICK 3</div>
-      <div class="pick3-balls">
-        ${rec.pick3.map(d => `<div class="ball ${type}">${d}</div>`).join('')}
+      <div class="picks-row">
+        <div>
+          <div class="rec-label">PICK 3</div>
+          <div style="display:flex;gap:8px">
+            ${rec.pick3.map(d => `<div class="ball ${type}">${d}</div>`).join('')}
+          </div>
+        </div>
+        <div class="picks-divider"></div>
+        <div>
+          <div class="rec-label">FIREBALL</div>
+          <div class="fireball-ball">${rec.fireball}</div>
+        </div>
       </div>
-      <div class="rec-label">FIREBALL</div>
-      <div class="fireball-ball">${rec.fireball}</div>
     `;
-
-    // Heatmaps for this time of day
-    const draws = filtered(type);
-    renderHeatmap(`heatmap-${type}-pick3`, heatmap(draws, false));
-    renderHeatmap(`heatmap-${type}-fb`,    heatmap(draws, true));
   }
 
   renderTab();
@@ -493,6 +489,17 @@ function render() {
 
 function renderTab() {
   const draws = filtered(activeTab);
+  const isM = activeTab === 'midday';
+
+  // Heatmaps
+  const pick3Title = document.getElementById('heatmap-pick3-title');
+  const fbTitle    = document.getElementById('heatmap-fb-title');
+  pick3Title.textContent = `${activeTab} — pick 3 frequency`;
+  pick3Title.style.color = isM ? 'var(--cyan)' : 'var(--purple)';
+  fbTitle.textContent    = `${activeTab} — fireball frequency`;
+  fbTitle.style.color    = 'var(--orange)';
+  renderHeatmap('heatmap-pick3', heatmap(draws, false));
+  renderHeatmap('heatmap-fb',    heatmap(draws, true));
 
   // Overdue
   const od = overdue(draws);
