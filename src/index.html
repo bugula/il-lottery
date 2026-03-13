@@ -111,8 +111,10 @@
     }
     .card-sub { font-size: 10px; color: var(--muted); margin-bottom: 12px; }
 
-    /* ── Heatmap row (stacked full-width) ── */
-    #heatmap-row .card { margin-bottom: 14px; }
+    /* ── Heatmap row (side by side) ── */
+    #heatmap-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    #heatmap-row .card { margin-bottom: 0; }
+    @media (max-width: 680px) { #heatmap-row { grid-template-columns: 1fr; } }
 
     /* ── Rec card (single combined) ── */
     .picks-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
