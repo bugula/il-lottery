@@ -1,22 +1,16 @@
 name: Scrape & Deploy
 
 on:
-  # illinoislotterynumbers.net (scraper source) typically posts ~1-2 hrs after each draw.
-  # Each draw has two cron entries to cover EDT (UTC-4) and EST (UTC-5).
-  # "early" runs seed the pre-draw dashboard; "catch-up" runs pull the actual result.
+  # Scraper now hits the official illinoislottery.com first (posts results immediately
+  # after each draw), so no catch-up delay needed.
+  # Two entries per draw cover both EDT (UTC-4) and EST (UTC-5); scraper is idempotent.
   schedule:
-    # Midday draw ~1:35pm ET — early run (pre-draw dashboard update)
-    - cron: '55 16 * * *'  # 12:55pm EDT / 11:55am EST
-    - cron: '55 17 * * *'  #  1:55pm EDT / 12:55pm EST
-    # Midday catch-up — source site should be updated by now
-    - cron: '30 19 * * *'  #  3:30pm EDT (UTC-4)
-    - cron: '30 20 * * *'  #  3:30pm EST (UTC-5)
-    # Evening draw ~10:15pm ET — early run (pre-draw dashboard update)
-    - cron: '35 1 * * *'   #  9:35pm EDT / 8:35pm EST
-    - cron: '35 2 * * *'   # 10:35pm EDT / 9:35pm EST
-    # Evening catch-up — source site should be updated by now
-    - cron: '30 3 * * *'   # 11:30pm EDT (UTC-4)
-    - cron: '30 4 * * *'   # 11:30pm EST (UTC-5)
+    # Midday draw ~1:35pm ET — run ~15 min after draw to allow results to post
+    - cron: '50 17 * * *'  #  1:50pm EDT (UTC-4)
+    - cron: '50 18 * * *'  #  1:50pm EST (UTC-5)
+    # Evening draw ~10:15pm ET — run ~15 min after draw
+    - cron: '30 2 * * *'   # 10:30pm EDT (UTC-4)
+    - cron: '30 3 * * *'   # 10:30pm EST (UTC-5)
   # Run on push to master (seeds data on first deploy)
   push:
     branches: [master]
@@ -44,6 +38,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Install scraper dependencies
+        run: |
+          pip install requests beautifulsoup4 lxml playwright
+          playwright install chromium --with-deps
 
       - name: Run scraper
         run: |
