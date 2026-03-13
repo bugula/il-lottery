@@ -111,15 +111,8 @@
     }
     .card-sub { font-size: 10px; color: var(--muted); margin-bottom: 12px; }
 
-    /* ── Heatmap row (side by side, always visible) ── */
-    #heatmap-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 14px;
-    }
-    #heatmap-row .card { margin-bottom: 0; }
-    @media (max-width: 680px) { #heatmap-row { grid-template-columns: 1fr; } }
+    /* ── Heatmap row (stacked full-width) ── */
+    #heatmap-row .card { margin-bottom: 14px; }
 
     /* ── Rec card (single combined) ── */
     .picks-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
@@ -225,10 +218,23 @@
     }
     #lab-toggle-btn:hover { background: rgba(180,120,255,0.14); }
 
-    /* ── Analytics Lab panels ── */
-    .lab-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-    .lab-2col .card { margin-bottom: 0; }
-    @media (max-width: 680px) { .lab-2col { grid-template-columns: 1fr; } }
+    /* ── Analytics Lab mode toggle ── */
+    .lab-mode-toggle { display: flex; gap: 4px; }
+    .lab-toggle-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #555;
+      padding: 4px 11px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .lab-toggle-btn.active-fb { background: rgba(255,136,0,0.12); border-color: rgba(255,136,0,0.3); color: var(--orange); }
+    .lab-toggle-btn.active-p3 { background: rgba(0,204,255,0.1); border-color: rgba(0,204,255,0.25); color: var(--cyan); }
 
     /* Digit strip — used by BTB and form panels */
     .lab-strip { display: flex; gap: 5px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
@@ -344,32 +350,30 @@
     <!-- Analytics Lab (collapsed by default, state persisted in localStorage) -->
     <div id="analytics-lab" style="display:none">
 
-      <!-- Row 1: Back-to-back repeat rates -->
-      <div class="lab-2col">
-        <div class="card">
-          <div class="card-title" style="color:var(--orange)">Fireball Repeat Rate</div>
-          <div class="card-sub">how often a digit follows itself in the very next draw · baseline 10%</div>
-          <div id="lab-fb-btb" class="overflow-x"></div>
+      <!-- Row 1: Back-to-back repeat rate (toggleable) -->
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div class="card-title" id="lab-btb-title"></div>
+          <div class="lab-mode-toggle">
+            <button class="lab-toggle-btn" id="btb-fb-btn" onclick="setLabBtbMode('fb')">🔥 FB</button>
+            <button class="lab-toggle-btn" id="btb-p3-btn" onclick="setLabBtbMode('p3')">P3</button>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-title" style="color:var(--cyan)">Pick 3 Repeat Rate</div>
-          <div class="card-sub">how often a digit reappears in Pick 3 of the next draw · baseline ~27%</div>
-          <div id="lab-p3-btb" class="overflow-x"></div>
-        </div>
+        <div class="card-sub" id="lab-btb-sub"></div>
+        <div id="lab-btb-content" class="overflow-x"></div>
       </div>
 
-      <!-- Row 2: Recent 30-day form vs all-time -->
-      <div class="lab-2col">
-        <div class="card">
-          <div class="card-title" style="color:var(--orange)">Fireball — 30-Day Form</div>
-          <div class="card-sub">last 30 days hit rate vs all-time average · ↑↑ hot · ↓↓ cold</div>
-          <div id="lab-fb-form" class="overflow-x"></div>
+      <!-- Row 2: 30-day form (toggleable) -->
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div class="card-title" id="lab-form-title"></div>
+          <div class="lab-mode-toggle">
+            <button class="lab-toggle-btn" id="form-fb-btn" onclick="setLabFormMode('fb')">🔥 FB</button>
+            <button class="lab-toggle-btn" id="form-p3-btn" onclick="setLabFormMode('p3')">P3</button>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-title" style="color:var(--cyan)">Pick 3 — 30-Day Form</div>
-          <div class="card-sub">last 30 days hit rate vs all-time average · ↑↑ hot · ↓↓ cold</div>
-          <div id="lab-p3-form" class="overflow-x"></div>
-        </div>
+        <div class="card-sub" id="lab-form-sub"></div>
+        <div id="lab-form-content" class="overflow-x"></div>
       </div>
 
       <!-- Row 3: Pick 3 position frequency -->
@@ -856,7 +860,11 @@ function clearError() {
 }
 
 // ─── Analytics Lab ────────────────────────────────────────────────────────────
-const LAB_LS_KEY = 'il_lab_open';
+const LAB_LS_KEY   = 'il_lab_open';
+const LAB_BTB_KEY  = 'il_lab_btb_mode';
+const LAB_FORM_KEY = 'il_lab_form_mode';
+let labBtbMode  = localStorage.getItem(LAB_BTB_KEY)  || 'fb';
+let labFormMode = localStorage.getItem(LAB_FORM_KEY) || 'fb';
 
 function toggleLab() {
   const lab   = document.getElementById('analytics-lab');
@@ -944,17 +952,34 @@ function btbCell(d, counts, baseline) {
   };
 }
 
-function renderLabFbBtb() {
-  const seq    = chronoDraws();
-  const counts = btbRate(seq, d => new Set([d.fireball]));
-  renderStrip('lab-fb-btb', DIGITS.map(d => btbCell(d, counts, 0.10)));
+function updateLabBtbUI() {
+  const isFb = labBtbMode === 'fb';
+  document.getElementById('lab-btb-title').textContent = isFb ? 'Fireball Repeat Rate' : 'Pick 3 Repeat Rate';
+  document.getElementById('lab-btb-title').style.color = isFb ? 'var(--orange)' : 'var(--cyan)';
+  document.getElementById('lab-btb-sub').textContent   = isFb
+    ? 'how often a digit follows itself in the very next draw · baseline 10%'
+    : 'how often a digit reappears in Pick 3 of the next draw · baseline ~27%';
+  document.getElementById('btb-fb-btn').className = 'lab-toggle-btn' + (isFb  ? ' active-fb' : '');
+  document.getElementById('btb-p3-btn').className = 'lab-toggle-btn' + (!isFb ? ' active-p3' : '');
 }
 
-function renderLabP3Btb() {
-  const seq      = chronoDraws();
-  const baseline = 1 - Math.pow(0.9, 3); // ~27%
-  const counts   = btbRate(seq, d => new Set(d.digits));
-  renderStrip('lab-p3-btb', DIGITS.map(d => btbCell(d, counts, baseline)));
+function setLabBtbMode(mode) {
+  labBtbMode = mode;
+  localStorage.setItem(LAB_BTB_KEY, mode);
+  renderLabBtb();
+}
+
+function renderLabBtb() {
+  updateLabBtbUI();
+  const seq = chronoDraws();
+  if (labBtbMode === 'fb') {
+    const counts = btbRate(seq, d => new Set([d.fireball]));
+    renderStrip('lab-btb-content', DIGITS.map(d => btbCell(d, counts, 0.10)));
+  } else {
+    const baseline = 1 - Math.pow(0.9, 3); // ~27%
+    const counts   = btbRate(seq, d => new Set(d.digits));
+    renderStrip('lab-btb-content', DIGITS.map(d => btbCell(d, counts, baseline)));
+  }
 }
 
 // ── 30-Day Form ───────────────────────────────────────────────────────────────
@@ -998,14 +1023,30 @@ function formCell(d, allRate, rcntRate) {
   };
 }
 
-function renderLabFbForm() {
-  const rates = formRates(allDraws, d => [d.fireball], 1);
-  renderStrip('lab-fb-form', rates.map(({ d, allRate, rcntRate }) => formCell(d, allRate, rcntRate)));
+function updateLabFormUI() {
+  const isFb = labFormMode === 'fb';
+  document.getElementById('lab-form-title').textContent = isFb ? 'Fireball — 30-Day Form' : 'Pick 3 — 30-Day Form';
+  document.getElementById('lab-form-title').style.color = isFb ? 'var(--orange)' : 'var(--cyan)';
+  document.getElementById('lab-form-sub').textContent   = 'last 30 days hit rate vs all-time average · ↑↑ hot · ↓↓ cold';
+  document.getElementById('form-fb-btn').className = 'lab-toggle-btn' + (isFb  ? ' active-fb' : '');
+  document.getElementById('form-p3-btn').className = 'lab-toggle-btn' + (!isFb ? ' active-p3' : '');
 }
 
-function renderLabP3Form() {
-  const rates = formRates(allDraws, d => d.digits, 3);
-  renderStrip('lab-p3-form', rates.map(({ d, allRate, rcntRate }) => formCell(d, allRate, rcntRate)));
+function setLabFormMode(mode) {
+  labFormMode = mode;
+  localStorage.setItem(LAB_FORM_KEY, mode);
+  renderLabForm();
+}
+
+function renderLabForm() {
+  updateLabFormUI();
+  if (labFormMode === 'fb') {
+    const rates = formRates(allDraws, d => [d.fireball], 1);
+    renderStrip('lab-form-content', rates.map(({ d, allRate, rcntRate }) => formCell(d, allRate, rcntRate)));
+  } else {
+    const rates = formRates(allDraws, d => d.digits, 3);
+    renderStrip('lab-form-content', rates.map(({ d, allRate, rcntRate }) => formCell(d, allRate, rcntRate)));
+  }
 }
 
 // ── Position Frequency ────────────────────────────────────────────────────────
@@ -1110,10 +1151,8 @@ function renderLabGapTable() {
 
 // ── Lab orchestrator ──────────────────────────────────────────────────────────
 function renderLab() {
-  renderLabFbBtb();
-  renderLabP3Btb();
-  renderLabFbForm();
-  renderLabP3Form();
+  renderLabBtb();
+  renderLabForm();
   renderLabPosTable();
   renderLabGapTable();
 }
