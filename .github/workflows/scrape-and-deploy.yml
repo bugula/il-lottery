@@ -1,21 +1,16 @@
 name: Scrape & Deploy
 
 on:
-  # Official site posts results immediately after each draw.
-  # Two crons per draw (+5 min and +10 min) cover both quick posts and any brief delay.
-  # Two timezone entries per draw (EDT/EST) keep the times correct year-round.
-  # Scraper is idempotent, so duplicate runs are harmless.
+  # Scraper hits the official illinoislottery.com first (posts results immediately
+  # after each draw), so no catch-up delay needed.
+  # Two entries per draw cover both EDT (UTC-4) and EST (UTC-5); scraper is idempotent.
   schedule:
-    # Midday draw ~1:35pm ET
-    - cron: '36 17 * * *'  #  1:36pm EDT (+1 min)
-    - cron: '40 17 * * *'  #  1:40pm EDT (+5 min)
-    - cron: '36 18 * * *'  #  1:36pm EST (+1 min)
-    - cron: '40 18 * * *'  #  1:40pm EST (+5 min)
-    # Evening draw ~10:15pm ET
-    - cron: '16 2 * * *'   # 10:16pm EDT (+1 min)
-    - cron: '20 2 * * *'   # 10:20pm EDT (+5 min)
-    - cron: '16 3 * * *'   # 10:16pm EST (+1 min)
-    - cron: '20 3 * * *'   # 10:20pm EST (+5 min)
+    # Midday draw ~1:35pm ET — run ~15 min after draw to allow results to post
+    - cron: '50 17 * * *'  #  1:50pm EDT (UTC-4)
+    - cron: '50 18 * * *'  #  1:50pm EST (UTC-5)
+    # Evening draw ~10:15pm ET — run ~15 min after draw
+    - cron: '30 2 * * *'   # 10:30pm EDT (UTC-4)
+    - cron: '30 3 * * *'   # 10:30pm EST (UTC-5)
   # Run on push to master (seeds data on first deploy)
   push:
     branches: [master]
